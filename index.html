@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Copa do Mundo das Vendas — Tênis One</title>
   <link rel="stylesheet" href="./styles.css" />
-  <script src="https://upload-widget.cloudinary.com/global/all.js" defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
   <script src="./config.js"></script>
 </head>
@@ -19,13 +18,16 @@
         Placar digital da gincana do Saulo: duplas, faturamento diário, gols por dezena,
         artilheiro individual e figurinhas dos vendedores.
       </p>
+      <div id="trialLoginNotice" class="trial-notice">
+        Teste gratuito por 3 dias. Após esse prazo, novos dados não serão salvos.
+      </div>
       <label class="field">
         PIN de acesso
         <input id="pinInput" type="password" placeholder="Digite o PIN" autocomplete="off" />
       </label>
       <button id="loginBtn" class="btn btn-primary">Entrar no sistema</button>
       <p id="loginError" class="error-text"></p>
-      <p class="micro">PIN padrão da demo: <strong>2026</strong>. Altere em <code>config.js</code>.</p>
+      <p class="micro">Acesso demonstrativo fornecido pela thIAguinho Soluções.</p>
     </div>
   </div>
 
@@ -33,7 +35,8 @@
     <div>
       <p class="eyebrow">Tênis One — Shopping Cidade Norte</p>
       <h1>Copa do Mundo das Vendas</h1>
-      <p id="connectionStatus" class="status-pill">Carregando...</p>
+      <p id="connectionStatus" class="status-pill">Preparando sistema...</p>
+      <p id="trialStatus" class="trial-status">Teste gratuito por 3 dias.</p>
     </div>
     <div class="top-actions">
       <button id="seedBtn" class="btn btn-light">Recriar dados demo</button>
@@ -48,7 +51,7 @@
       <button class="tab" data-view="sales">Lançar vendas</button>
       <button class="tab" data-view="rounds">Rodadas</button>
       <button class="tab" data-view="stickers">Figurinhas</button>
-      <button class="tab" data-view="settings">Configuração</button>
+      <button class="tab" data-view="settings">Regras</button>
     </nav>
 
     <section id="dashboard" class="view active">
@@ -229,7 +232,7 @@
           <button id="downloadStickerPackBtn" class="btn btn-blue">Baixar álbum em PDF</button>
         </div>
         <p class="muted">
-          Com Cloudinary configurado, o botão envia a foto para a nuvem. Sem Cloudinary, a imagem fica salva na base/local como demonstração.
+          Envie a foto de cada vendedor para montar o álbum visual da gincana.
         </p>
         <div id="stickerGrid" class="sticker-grid"></div>
       </div>
@@ -249,18 +252,29 @@
         <article class="card">
           <div class="card-head">
             <div>
-              <p class="eyebrow">Integrações</p>
-              <h2>Firebase e Cloudinary</h2>
+              <p class="eyebrow">Premiação</p>
+              <h2>Prêmios da campanha</h2>
             </div>
           </div>
           <div class="checklist">
-            <p id="firebaseCheck">Firebase: verificando...</p>
-            <p id="cloudinaryCheck">Cloudinary: verificando...</p>
+            <p><strong>Dupla campeã:</strong> R$ 100,00 via PIX para cada integrante + 1 folga premiada para cada um.</p>
+            <p><strong>Artilheiro individual:</strong> R$ 100,00 via PIX para quem mais vender no acumulado do mês.</p>
             <p class="note">
-              Edite o arquivo <code>config.js</code> com as credenciais reais antes de publicar para o Saulo.
-              O app continua funcionando em modo local para apresentação.
+              O bônus de dezena foi aplicado nesta demonstração como maior faturamento da dezena. Essa regra pode ser ajustada na versão final.
             </p>
           </div>
+        </article>
+
+        <article class="card contact-card">
+          <div class="card-head">
+            <div>
+              <p class="eyebrow">Teste gratuito</p>
+              <h2>Sugestões e alterações</h2>
+            </div>
+          </div>
+          <p>
+            Esta versão é uma demonstração gratuita por 3 dias. Para solicitar ajustes, melhorias ou aprovação da próxima etapa, envie as sugestões para o WhatsApp do <strong>Thiago Ventura Valêncio</strong>.
+          </p>
         </article>
       </div>
     </section>

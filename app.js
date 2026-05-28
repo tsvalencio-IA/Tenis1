@@ -1,11 +1,12 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
-import { getDatabase, ref, set, update, onValue, get } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-database.js";
-import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-auth.js";
-
 const CONFIG = window.APP_CONFIG || {};
 const campaign = CONFIG.campaign || {};
 const TEAMS = campaign.teams || {};
 const VENDORS_SEED = campaign.vendors || [];
+const TRIAL_DAYS = Number(CONFIG.trialDays || 3);
+const CONTACT_TEXT = `${CONFIG.contactChannel || "WhatsApp"} do ${CONFIG.contactPerson || "Thiago Ventura Valêncio"}`;
+const TRIAL_KEY = "copa_tenis_one_trial_started_at";
+const LOCAL_STATE_KEY = "copa_tenis_one_state";
+let services = {};
 
 const state = {
   mode: "local",
@@ -30,6 +31,63 @@ function isoToday() {
   const d = new Date();
   const offset = d.getTimezoneOffset();
   return new Date(d.getTime() - offset * 60000).toISOString().slice(0, 10);
+}
+
+function getTrialInfo() {
+  let startRaw = localStorage.getItem(TRIAL_KEY);
+  if (!startRaw) {
+    startRaw = new Date().toISOString();
+    localStorage.setItem(TRIAL_KEY, startRaw);
+  }
+
+  let startDate = new Date(startRaw);
+  if (Number.isNaN(startDate.getTime())) {
+    startDate = new Date();
+    startRaw = startDate.toISOString();
+    localStorage.setItem(TRIAL_KEY, startRaw);
+  }
+
+  const expiresAt = new Date(startDate.getTime() + TRIAL_DAYS * 24 * 60 * 60 * 1000);
+  const remainingMs = expiresAt.getTime() - Date.now();
+  const expired = remainingMs <= 0;
+  const daysLeft = Math.max(0, Math.ceil(remainingMs / (24 * 60 * 60 * 1000)));
+
+  return { startDate, expiresAt, expired, daysLeft };
+}
+
+function updateTrialUI() {
+  const info = getTrialInfo();
+  const loginNotice = $("trialLoginNotice");
+  const status = $("trialStatus");
+
+  const validText = `Teste gratuito: ${info.daysLeft} dia(s) restante(s). Depois disso, novos dados não serão salvos. Sugestões e alterações: ${CONTACT_TEXT}.`;
+  const expiredText = `Teste gratuito encerrado. Novos dados não serão salvos. Envie sugestões e alterações para o ${CONTACT_TEXT}.`;
+
+  [loginNotice, status].forEach((el) => {
+    if (!el) return;
+    el.textContent = info.expired ? expiredText : validText;
+    el.classList.toggle("expired", info.expired);
+  });
+
+  document.querySelectorAll("#saleForm button, #closeTodayBtn, #closeRoundBtn, [data-bonus], [data-upload], [data-clear-photo], #seedBtn")
+    .forEach((el) => el.classList.toggle("trial-lock", info.expired));
+
+  return info;
+}
+
+function resetDemoViewAfterTrial() {
+  state.data = createSeedData();
+  localStorage.removeItem(LOCAL_STATE_KEY);
+  render();
+  updateTrialUI();
+}
+
+function ensureCanSave(action = "salvar novos dados") {
+  const info = updateTrialUI();
+  if (!info.expired) return true;
+  resetDemoViewAfterTrial();
+  toast(`Teste gratuito encerrado. Não é possível ${action}. Envie sugestões e alterações para o ${CONTACT_TEXT}.`);
+  return false;
 }
 
 function dayFromISO(date) {
@@ -71,7 +129,13 @@ function toast(message) {
 }
 
 function localLoad() {
-  const raw = localStorage.getItem("copa_tenis_one_state");
+  if (getTrialInfo().expired) {
+    state.data = createSeedData();
+    localStorage.removeItem(LOCAL_STATE_KEY);
+    return;
+  }
+
+  const raw = localStorage.getItem(LOCAL_STATE_KEY);
   if (raw) {
     try {
       state.data = JSON.parse(raw);
@@ -85,28 +149,40 @@ function localLoad() {
 }
 
 function localSave() {
-  localStorage.setItem("copa_tenis_one_state", JSON.stringify(state.data));
+  if (getTrialInfo().expired) return false;
+  localStorage.setItem(LOCAL_STATE_KEY, JSON.stringify(state.data));
+  return true;
 }
 
 async function savePath(path, value) {
+  if (!ensureCanSave("salvar novos dados")) return false;
+
   if (state.mode === "firebase" && state.db) {
-    await set(ref(state.db, path), value);
+    await services.set(services.ref(state.db, path), value);
   } else {
     setDeep(state.data, path.replace(/^copaTenisOne\//, "").split("/"), value);
     localSave();
     render();
   }
+
+  updateTrialUI();
+  return true;
 }
 
 async function updatePath(path, value) {
+  if (!ensureCanSave("salvar alterações")) return false;
+
   if (state.mode === "firebase" && state.db) {
-    await update(ref(state.db, path), value);
+    await services.update(services.ref(state.db, path), value);
   } else {
     const current = getDeep(state.data, path.replace(/^copaTenisOne\//, "").split("/")) || {};
     setDeep(state.data, path.replace(/^copaTenisOne\//, "").split("/"), { ...current, ...value });
     localSave();
     render();
   }
+
+  updateTrialUI();
+  return true;
 }
 
 function getDeep(obj, parts) {
@@ -145,41 +221,104 @@ function createSeedData() {
 
 async function seedData(force = false) {
   const seed = createSeedData();
+
+  if (getTrialInfo().expired) {
+    state.data = seed;
+    localStorage.removeItem(LOCAL_STATE_KEY);
+    render();
+    updateTrialUI();
+    if (force) toast(`Teste gratuito encerrado. Não é possível recriar dados. Envie sugestões e alterações para o ${CONTACT_TEXT}.`);
+    return false;
+  }
+
+  if (force && !ensureCanSave("recriar dados")) return false;
+
   if (state.mode === "firebase" && state.db) {
-    const snap = await get(ref(state.db, "copaTenisOne/vendors"));
+    const snap = await services.get(services.ref(state.db, "copaTenisOne/vendors"));
     if (!snap.exists() || force) {
-      await set(ref(state.db, "copaTenisOne"), seed);
-      toast("Dados demonstrativos recriados no Firebase.");
+      await services.set(services.ref(state.db, "copaTenisOne"), seed);
+      toast("Dados demonstrativos recriados.");
     }
   } else {
     if (force || !state.data.vendors || !Object.keys(state.data.vendors).length) {
       state.data = seed;
       localSave();
-      toast("Dados demonstrativos recriados localmente.");
+      toast("Dados demonstrativos recriados.");
       render();
     }
   }
+
+  updateTrialUI();
+  return true;
+}
+
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    const existing = Array.from(document.scripts).find((script) => script.src === src);
+    if (existing) return resolve();
+    const script = document.createElement("script");
+    script.src = src;
+    script.async = true;
+    script.onload = () => resolve();
+    script.onerror = reject;
+    document.head.appendChild(script);
+  });
+}
+
+async function loadPhotoWidget() {
+  if (window.cloudinary?.createUploadWidget) return true;
+  try {
+    await loadScript("https://upload-widget.cloudinary.com/global/all.js");
+    return !!window.cloudinary?.createUploadWidget;
+  } catch {
+    return false;
+  }
+}
+
+async function loadSyncServices() {
+  const [appModule, databaseModule, authModule] = await Promise.all([
+    import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js"),
+    import("https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js"),
+    import("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js")
+  ]);
+
+  services = {
+    initializeApp: appModule.initializeApp,
+    getDatabase: databaseModule.getDatabase,
+    ref: databaseModule.ref,
+    set: databaseModule.set,
+    update: databaseModule.update,
+    onValue: databaseModule.onValue,
+    get: databaseModule.get,
+    getAuth: authModule.getAuth,
+    signInAnonymously: authModule.signInAnonymously,
+    onAuthStateChanged: authModule.onAuthStateChanged
+  };
 }
 
 async function initFirebaseOrLocal() {
   $("saleDate").value = isoToday();
   $("roundDate").value = isoToday();
 
+  const trial = updateTrialUI();
+  if (trial.expired) {
+    state.mode = "expired";
+    state.data = createSeedData();
+    localStorage.removeItem(LOCAL_STATE_KEY);
+    $("connectionStatus").textContent = "Teste gratuito encerrado";
+    $("connectionStatus").style.background = "#fff1f1";
+    $("connectionStatus").style.color = "#9b1c1c";
+    render();
+    updateTrialUI();
+    return;
+  }
+
   const firebaseReady = isConfigured(CONFIG.firebase, ["apiKey", "authDomain", "databaseURL", "projectId", "appId"]);
-  const cloudinaryReady = isConfigured(CONFIG.cloudinary, ["cloudName", "uploadPreset"]);
-
-  $("firebaseCheck").textContent = firebaseReady
-    ? "Firebase: configurado. Usando Realtime Database."
-    : "Firebase: não configurado. Usando modo local para demonstração.";
-
-  $("cloudinaryCheck").textContent = cloudinaryReady
-    ? "Cloudinary: configurado. Upload em nuvem disponível."
-    : "Cloudinary: não configurado. Upload local demonstrativo.";
 
   if (!firebaseReady) {
     state.mode = "local";
     localLoad();
-    $("connectionStatus").textContent = "Modo local demonstrativo";
+    $("connectionStatus").textContent = "Sistema pronto para apresentação";
     $("connectionStatus").style.background = "#fff8db";
     $("connectionStatus").style.color = "#6d5200";
     await seedData(false);
@@ -188,20 +327,21 @@ async function initFirebaseOrLocal() {
   }
 
   try {
-    const app = initializeApp(CONFIG.firebase);
-    const auth = getAuth(app);
-    state.db = getDatabase(app);
+    await loadSyncServices();
+    const app = services.initializeApp(CONFIG.firebase);
+    const auth = services.getAuth(app);
+    state.db = services.getDatabase(app);
     state.mode = "firebase";
-    $("connectionStatus").textContent = "Conectando ao Firebase...";
+    $("connectionStatus").textContent = "Conectando...";
 
-    await signInAnonymously(auth);
+    await services.signInAnonymously(auth);
 
-    onAuthStateChanged(auth, async (user) => {
+    services.onAuthStateChanged(auth, async (user) => {
       if (!user) return;
       await seedData(false);
-      onValue(ref(state.db, "copaTenisOne"), (snapshot) => {
+      services.onValue(services.ref(state.db, "copaTenisOne"), (snapshot) => {
         state.data = snapshot.val() || createSeedData();
-        $("connectionStatus").textContent = "Firebase Realtime Database ativo";
+        $("connectionStatus").textContent = "Sistema sincronizado";
         $("connectionStatus").style.background = "#e8f7ee";
         $("connectionStatus").style.color = "#08643a";
         render();
@@ -211,9 +351,9 @@ async function initFirebaseOrLocal() {
     console.error(error);
     state.mode = "local";
     localLoad();
-    $("connectionStatus").textContent = "Falha no Firebase — modo local ativo";
-    $("connectionStatus").style.background = "#fff1f1";
-    $("connectionStatus").style.color = "#b42318";
+    $("connectionStatus").textContent = "Sistema pronto para apresentação";
+    $("connectionStatus").style.background = "#fff8db";
+    $("connectionStatus").style.color = "#6d5200";
     render();
   }
 }
@@ -328,7 +468,8 @@ async function closeRound(date) {
     closedAt: new Date().toISOString()
   };
 
-  await savePath(`copaTenisOne/rounds/${date}`, round);
+  const saved = await savePath(`copaTenisOne/rounds/${date}`, round);
+  if (!saved) return;
   toast(winnerTeam ? `${teamName(winnerTeam)} venceu a rodada e marcou ${goalsAwarded} gol(s).` : "Rodada empatada. Nenhum gol aplicado na demo.");
 }
 
@@ -344,11 +485,12 @@ async function applyBonus(dezena) {
     teamTotals: totals,
     winnerTeam,
     goalsAwarded: winnerTeam ? 3 : 0,
-    ruleUsed: "Maior faturamento da dezena — ajustar se Saulo definir meta percentual.",
+    ruleUsed: "Maior faturamento da dezena.",
     closedAt: new Date().toISOString()
   };
 
-  await savePath(`copaTenisOne/bonuses/dezena_${dezena}`, bonus);
+  const saved = await savePath(`copaTenisOne/bonuses/dezena_${dezena}`, bonus);
+  if (!saved) return;
   toast(winnerTeam ? `${teamName(winnerTeam)} ganhou +3 gols na ${dezena}ª dezena.` : "Bônus empatado. Nenhum gol aplicado na demo.");
 }
 
@@ -476,8 +618,8 @@ function renderStickers() {
 
   document.querySelectorAll("[data-clear-photo]").forEach((button) => {
     button.addEventListener("click", async () => {
-      await updatePath(`copaTenisOne/vendors/${button.dataset.clearPhoto}`, { imageUrl: "" });
-      toast("Foto removida.");
+      const saved = await updatePath(`copaTenisOne/vendors/${button.dataset.clearPhoto}`, { imageUrl: "" });
+      if (saved) toast("Foto removida.");
     });
   });
 }
@@ -491,6 +633,8 @@ function renderRules() {
     ["Dias 11 a 20", "Vitória do dia = 2 gols."],
     ["Dias 21 a 30", "Vitória do dia = 3 gols."],
     ["Bônus da dezena", "+3 gols para a dupla com maior faturamento da dezena nesta demo."],
+    ["Teste gratuito", `${TRIAL_DAYS} dias. Após o prazo, novos dados não serão salvos.`],
+    ["Sugestões e alterações", `Enviar para o ${CONTACT_TEXT}.`],
     ["Prêmio dupla campeã", campaign.prizes?.teamChampion || "A definir"],
     ["Prêmio artilheiro", campaign.prizes?.topSeller || "A definir"]
   ];
@@ -510,11 +654,14 @@ function render() {
   renderRounds();
   renderStickers();
   renderRules();
+  updateTrialUI();
 }
 
 async function uploadPhoto(vendorId) {
+  if (!ensureCanSave("enviar foto")) return;
+
   const cloudinaryReady = isConfigured(CONFIG.cloudinary, ["cloudName", "uploadPreset"]);
-  if (cloudinaryReady && window.cloudinary?.createUploadWidget) {
+  if (cloudinaryReady && await loadPhotoWidget()) {
     const widget = window.cloudinary.createUploadWidget(
       {
         cloudName: CONFIG.cloudinary.cloudName,
@@ -528,12 +675,12 @@ async function uploadPhoto(vendorId) {
       async (error, result) => {
         if (error) {
           console.error(error);
-          toast("Erro ao enviar imagem para Cloudinary.");
+          toast("Erro ao atualizar a foto.");
           return;
         }
         if (result && result.event === "success") {
-          await updatePath(`copaTenisOne/vendors/${vendorId}`, { imageUrl: result.info.secure_url });
-          toast("Foto enviada para Cloudinary.");
+          const saved = await updatePath(`copaTenisOne/vendors/${vendorId}`, { imageUrl: result.info.secure_url });
+          if (saved) toast("Foto atualizada.");
         }
       }
     );
@@ -549,8 +696,8 @@ async function uploadPhoto(vendorId) {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = async () => {
-      await updatePath(`copaTenisOne/vendors/${vendorId}`, { imageUrl: reader.result });
-      toast("Foto salva localmente para demonstração.");
+      const saved = await updatePath(`copaTenisOne/vendors/${vendorId}`, { imageUrl: reader.result });
+      if (saved) toast("Foto salva.");
     };
     reader.readAsDataURL(file);
   };
@@ -670,6 +817,7 @@ function bindEvents() {
     if (pin === (CONFIG.demoPin || "2026")) {
       $("loginScreen").style.display = "none";
       sessionStorage.setItem("copa_logged", "1");
+      updateTrialUI();
     } else {
       $("loginError").textContent = "PIN incorreto.";
     }
@@ -713,7 +861,8 @@ function bindEvents() {
       updatedAt: new Date().toISOString()
     };
 
-    await savePath(`copaTenisOne/sales/${sale.id}`, sale);
+    const saved = await savePath(`copaTenisOne/sales/${sale.id}`, sale);
+    if (!saved) return;
     $("saleAmount").value = "";
     $("saleNote").value = "";
     toast("Venda salva.");

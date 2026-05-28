@@ -1,11 +1,9 @@
-// CONFIGURAÇÃO DO DEMONSTRATIVO
-// 1) Para testar localmente, não precisa alterar nada.
-// 2) Para usar Firebase Realtime Database, preencha os dados em "firebase".
-// 3) Para usar upload de fotos via Cloudinary, preencha cloudName e uploadPreset.
-//    O uploadPreset precisa ser "unsigned" no painel da Cloudinary.
-
 window.APP_CONFIG = {
   demoPin: "2026",
+  trialDays: 3,
+  contactPerson: "Thiago Ventura Valêncio",
+  contactChannel: "WhatsApp",
+
 
   campaign: {
     name: "Copa do Mundo das Vendas",

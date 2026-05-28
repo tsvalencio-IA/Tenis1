@@ -589,3 +589,41 @@ code {
     width: 100%;
   }
 }
+
+
+.trial-notice,
+.trial-status {
+  border: 1px solid rgba(245, 197, 66, .55);
+  background: #fff8db;
+  color: #6d5200;
+  border-radius: 16px;
+  padding: 11px 13px;
+  font-weight: 900;
+}
+
+.trial-notice {
+  margin: 16px 0 6px;
+  font-size: 13px;
+}
+
+.trial-status {
+  display: inline-block;
+  margin: 10px 0 0;
+  font-size: 13px;
+}
+
+.trial-status.expired,
+.trial-notice.expired {
+  background: #fff1f1;
+  border-color: #ffc9c9;
+  color: #9b1c1c;
+}
+
+.trial-lock {
+  opacity: .55;
+  cursor: not-allowed !important;
+}
+
+.contact-card {
+  background: linear-gradient(135deg, #ffffff, #fff8db);
+}
