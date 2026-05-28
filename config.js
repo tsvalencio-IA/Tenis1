@@ -6,12 +6,12 @@ window.APP_CONFIG = {
   contactChannel: "WhatsApp",
 
   campaign: {
-    name: "Copa do Mundo das Vendas",
+    name: "Copa do Mundo de Vendas Diária",
     store: "Tênis One — Shopping Cidade Norte",
     startDate: "2026-06-01",
     endDate: "2026-06-30",
     productsRule: "Todos os produtos da loja contam.",
-    bonusRuleNote: "A regra 'maior meta batida' ainda precisa ser confirmada pelo Saulo. Nesta demonstração, o gerente escolhe se o bônus será automático por faturamento da dezena ou manual.",
+    bonusRuleNote: "Rodadas, gols e bônus são automáticos. Nesta versão, maior meta batida é calculada como maior faturamento acumulado da dezena; se houver alteração de venda, o bônus é recalculado.",
     prizes: {
       teamChampion: "R$ 100,00 via PIX para cada integrante + 1 folga premiada para cada um.",
       topSeller: "R$ 100,00 via PIX para o artilheiro individual."

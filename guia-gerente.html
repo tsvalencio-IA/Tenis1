@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Guia do Gerente — Copa do Mundo de Vendas Diária</title>
+  <style>
+    :root{--green:#0b7f49;--blue:#143f91;--yellow:#f5c542;--text:#102018;--muted:#66766d;--line:#dce7df;--bg:#f4f8f5;--card:#fff;--shadow:0 18px 44px rgba(7,45,24,.10)}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Arial,Helvetica,sans-serif;background:radial-gradient(circle at 12% 0%,rgba(245,197,66,.35),transparent 24%),linear-gradient(180deg,#eaf7ee,var(--bg));color:var(--text);line-height:1.5}
+    .wrap{width:min(1080px,calc(100% - 28px));margin:0 auto;padding:24px 0 44px}
+    .hero,.card{background:rgba(255,255,255,.96);border:1px solid var(--line);border-radius:26px;box-shadow:var(--shadow)}
+    .hero{padding:28px;margin-bottom:18px}
+    .badge{display:inline-flex;padding:8px 12px;border-radius:999px;background:#fff8db;color:#755600;font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.06em}
+    h1{font-size:clamp(30px,5vw,54px);line-height:1;margin:16px 0 10px;color:var(--green);letter-spacing:-.05em}
+    .subtitle{max-width:820px;color:var(--muted);font-size:17px;margin:0}
+    .actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+    button,a.btn{appearance:none;border:0;text-decoration:none;display:inline-flex;justify-content:center;align-items:center;gap:8px;border-radius:14px;padding:12px 15px;font-weight:900;cursor:pointer}
+    .btn-primary{background:var(--green);color:#fff}.btn-blue{background:var(--blue);color:#fff}.btn-light{background:#edf8f1;color:var(--green);border:1px solid #cbe6d4}
+    .progress{position:sticky;top:0;z-index:5;background:rgba(244,248,245,.92);backdrop-filter:blur(10px);padding:10px 0;margin-bottom:18px}
+    .bar{height:10px;border-radius:999px;background:#dce8df;overflow:hidden}.fill{height:100%;width:0%;background:linear-gradient(90deg,var(--green),var(--yellow),var(--blue));transition:.25s}
+    .layout{display:grid;grid-template-columns:280px 1fr;gap:18px;align-items:start}
+    .menu{position:sticky;top:54px;background:#fff;border:1px solid var(--line);border-radius:22px;padding:14px;box-shadow:var(--shadow)}
+    .menu button{width:100%;justify-content:flex-start;margin:4px 0;background:#fff;color:var(--text);border:1px solid transparent}
+    .menu button.active{background:#edf8f1;border-color:#cbe6d4;color:var(--green)}
+    .steps{display:grid;gap:18px}
+    .card{padding:24px;display:none}.card.active{display:block}
+    .eyebrow{margin:0 0 6px;color:var(--green);font-weight:900;text-transform:uppercase;letter-spacing:.08em;font-size:12px}
+    h2{font-size:28px;margin:0 0 8px;letter-spacing:-.04em}
+    .note{background:#eef4ff;border:1px solid #cad9f5;color:#183b72;padding:14px;border-radius:16px;font-weight:700}
+    .warning{background:#fff8db;border:1px solid #efd77b;color:#664c00;padding:14px;border-radius:16px;font-weight:700}
+    .checklist{display:grid;gap:10px;margin-top:16px}
+    .check{display:flex;gap:10px;align-items:flex-start;background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px}
+    .check input{margin-top:4px;accent-color:var(--green)}
+    table{width:100%;border-collapse:collapse;margin:14px 0;border-radius:16px;overflow:hidden}
+    th,td{padding:12px;border:1px solid var(--line);text-align:left}th{background:#edf8f1;color:var(--green)}
+    .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}.mini{background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px}
+    .footer-nav{display:flex;justify-content:space-between;gap:10px;margin-top:18px}.footer-nav button{min-width:130px}
+    @media(max-width:860px){.layout{grid-template-columns:1fr}.menu{position:relative;top:auto}.grid{grid-template-columns:1fr}.actions button,.actions .btn{width:100%}.footer-nav{position:sticky;bottom:0;background:rgba(244,248,245,.94);padding:10px 0}.footer-nav button{flex:1;min-width:auto}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <span class="badge">Guia oficial do gerente</span>
+      <h1>Copa do Mundo de Vendas Diária</h1>
+      <p class="subtitle">Aprenda o fluxo completo do sistema: cadastro, vendas, cálculo automático de gols, bônus da dezena, figurinhas, álbum, auditoria e relatório.</p>
+      <div class="actions">
+        <button class="btn-primary" onclick="startGuide()">Iniciar guia</button>
+        <a class="btn btn-blue" href="index.html">Abrir sistema</a>
+        <button class="btn-light" onclick="window.print()">Imprimir guia</button>
+      </div>
+    </section>
+    <div class="progress"><div class="bar"><div id="fill" class="fill"></div></div></div>
+    <div class="layout">
+      <nav class="menu" id="menu"></nav>
+      <main class="steps" id="steps">
+        <section class="card active" data-title="Visão geral">
+          <p class="eyebrow">1. Visão geral</p><h2>Quem controla o sistema?</h2>
+          <p>Somente o gerente controla cadastros, vendas, fotos, figurinhas, rodadas, bônus e relatórios. O vendedor entra apenas para acompanhar.</p>
+          <div class="grid"><div class="mini"><strong>Gerente</strong><p>Cadastra vendedores, lança vendas e administra tudo.</p></div><div class="mini"><strong>Vendedor</strong><p>Vê placar, ranking, desempenho e álbum. Não altera dados.</p></div></div>
+          <div class="warning">Senhas: gerente <strong>2026</strong> | vendedores <strong>vendas</strong>.</div>
+        </section>
+        <section class="card" data-title="Regra da campanha">
+          <p class="eyebrow">2. Regra oficial</p><h2>Como a Copa funciona</h2>
+          <table><tr><th>Item</th><th>Regra</th></tr><tr><td>Time Verde</td><td>Isack + Viviane</td></tr><tr><td>Time Azul</td><td>Matheus + Brian</td></tr><tr><td>Rodada</td><td>Cada dia é uma rodada.</td></tr><tr><td>Gol do dia</td><td>A dupla com maior faturamento do dia marca gol.</td></tr><tr><td>Bônus</td><td>+3 gols automáticos para a dupla com maior faturamento acumulado da dezena.</td></tr><tr><td>Artilheiro</td><td>Vendedor com maior faturamento individual acumulado.</td></tr></table>
+          <table><tr><th>Período</th><th>Peso do gol</th></tr><tr><td>Dias 01 a 10</td><td>1 gol</td></tr><tr><td>Dias 11 a 20</td><td>2 gols</td></tr><tr><td>Dias 21 ao fim</td><td>3 gols</td></tr></table>
+        </section>
+        <section class="card" data-title="Cadastro dos vendedores">
+          <p class="eyebrow">3. Cadastro</p><h2>Como cadastrar ou editar vendedores</h2>
+          <p>No menu do gerente, entre em <strong>Gerenciar vendedores</strong>. Ali você edita nome, nome curto, equipe, número da camisa, status ativo, ordem no álbum e informações da figurinha.</p>
+          <div class="note">A equipe do vendedor é importante porque o sistema soma automaticamente as vendas por dupla.</div>
+        </section>
+        <section class="card" data-title="Figurinhas">
+          <p class="eyebrow">4. Figurinhas</p><h2>Como enviar fotos e montar as figurinhas</h2>
+          <p>Em <strong>Gerenciar vendedores</strong>, o gerente escolhe a foto, raridade, título, subtítulo, número da camisa, se aparece no álbum e se será destaque especial.</p>
+          <div class="grid"><div class="mini"><strong>Raridade</strong><p>Clássica, Prata, Ouro ou Lendária. A escolha é manual do gerente.</p></div><div class="mini"><strong>Títulos</strong><p>Craque da Rodada, Artilheiro, Camisa 10, Capitão ou personalizado.</p></div></div>
+        </section>
+        <section class="card" data-title="Lançar vendas">
+          <p class="eyebrow">5. Vendas</p><h2>Como lançar as vendas</h2>
+          <p>Entre em <strong>Lançar vendas</strong>, escolha a data, o vendedor e informe o valor vendido no dia. Clique em salvar.</p>
+          <div class="note">Ao salvar a venda, o sistema recalcula automaticamente o total da dupla, o vencedor da rodada, os gols do dia, o bônus da dezena, o placar e o ranking.</div>
+        </section>
+        <section class="card" data-title="Automação de gols">
+          <p class="eyebrow">6. Automação</p><h2>O que acontece automaticamente</h2>
+          <p>Depois de cada venda salva, o sistema atualiza:</p>
+          <div class="checklist"><label class="check"><input type="checkbox"> soma do Time Verde</label><label class="check"><input type="checkbox"> soma do Time Azul</label><label class="check"><input type="checkbox"> vencedor do dia</label><label class="check"><input type="checkbox"> gols conforme a dezena</label><label class="check"><input type="checkbox"> bônus automático da dezena</label><label class="check"><input type="checkbox"> ranking individual e artilheiro</label></div>
+        </section>
+        <section class="card" data-title="Correções e auditoria">
+          <p class="eyebrow">7. Auditoria</p><h2>Como corrigir e conferir</h2>
+          <p>Se lançar uma venda novamente para o mesmo vendedor e mesma data, o valor anterior será atualizado. O sistema recalcula tudo automaticamente.</p>
+          <p>Na tela <strong>Rodadas e bônus</strong>, o gerente confere o histórico de rodadas e bônus aplicados. Use <strong>Recalcular placar completo</strong> apenas para auditoria ou conferência.</p>
+        </section>
+        <section class="card" data-title="Álbum e relatório">
+          <p class="eyebrow">8. Exportações</p><h2>Como gerar álbum e relatório</h2>
+          <p>Em <strong>Álbum e figurinhas</strong>, veja a prévia do álbum e baixe o álbum em PDF/PNG. Em <strong>Relatórios</strong>, gere o relatório com placar, ranking, artilheiro e rodadas.</p>
+        </section>
+        <section class="card" data-title="Checklist diário">
+          <p class="eyebrow">9. Checklist</p><h2>Rotina diária do gerente</h2>
+          <div class="checklist"><label class="check"><input type="checkbox"> conferir vendas do dia anterior</label><label class="check"><input type="checkbox"> lançar vendas por vendedor</label><label class="check"><input type="checkbox"> conferir placar automático</label><label class="check"><input type="checkbox"> conferir bônus da dezena</label><label class="check"><input type="checkbox"> atualizar fotos ou figurinhas, se necessário</label><label class="check"><input type="checkbox"> comunicar resultado no grupo/loja</label></div>
+        </section>
+      </main>
+    </div>
+    <div class="footer-nav"><button class="btn-light" onclick="prevStep()">Voltar</button><button class="btn-primary" onclick="nextStep()">Próxima etapa</button></div>
+  </div>
+  <script>
+    const cards=[...document.querySelectorAll('.card')], menu=document.getElementById('menu'), fill=document.getElementById('fill'); let current=0;
+    cards.forEach((card,i)=>{const b=document.createElement('button'); b.textContent=card.dataset.title; b.onclick=()=>show(i); menu.appendChild(b);});
+    function show(i){current=Math.max(0,Math.min(cards.length-1,i));cards.forEach((c,k)=>c.classList.toggle('active',k===current));[...menu.children].forEach((b,k)=>b.classList.toggle('active',k===current));fill.style.width=((current+1)/cards.length*100)+'%';window.scrollTo({top:0,behavior:'smooth'});}
+    function startGuide(){show(0);document.querySelector('.layout').scrollIntoView({behavior:'smooth'});} function nextStep(){show(current+1)} function prevStep(){show(current-1)} show(0);
+  </script>
+</body>
+</html>

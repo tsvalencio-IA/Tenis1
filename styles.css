@@ -1421,3 +1421,70 @@ nav {
   .sticker-footer-brand { left: 64px; right: 42px; bottom: 10px; font-size: 8px; }
   .sticker-special-ribbon { left: 18px; right: 18px; top: 152px; min-height: 22px; font-size: 8px; }
 }
+
+.daily-group-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.daily-group-card,
+.daily-result-card {
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 14px;
+  background: linear-gradient(180deg, #ffffff, #f8fbf9);
+}
+
+.daily-group-card.verde {
+  border-color: rgba(8, 100, 58, .18);
+}
+
+.daily-group-card.azul {
+  border-color: rgba(20, 63, 145, .18);
+}
+
+.daily-group-card.winner {
+  box-shadow: 0 0 0 3px rgba(245, 197, 66, .32);
+}
+
+.daily-group-card span,
+.daily-result-card span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+.daily-group-card strong,
+.daily-result-card strong {
+  display: block;
+  margin: 7px 0 4px;
+  font-size: 20px;
+  color: var(--text);
+  letter-spacing: -.03em;
+}
+
+.daily-group-card small,
+.daily-result-card small {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.daily-individual-title {
+  margin: 14px 0 8px;
+  color: var(--green);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+@media (max-width: 860px) {
+  .daily-group-summary {
+    grid-template-columns: 1fr;
+  }
+}

@@ -49,6 +49,7 @@
         <strong>Acesso gerente:</strong> senha 2026<br>
         <strong>Acesso vendedores:</strong> senha vendas
       </div>
+      <div class="login-hint"><a href="guia-gerente.html">Abrir guia do gerente</a></div>
     </div>
   </section>
 
@@ -80,7 +81,7 @@
 
       <div class="side-footer">
         <div id="trialStatus" class="trial-status"></div>
-        <button id="logoutBtn" class="btn btn-outline wide">Sair</button>
+        <a class="btn btn-light wide" href="guia-gerente.html">Guia do gerente</a><button id="logoutBtn" class="btn btn-outline wide">Sair</button>
       </div>
     </aside>
 
@@ -107,7 +108,7 @@
           <div class="score-center">
             <span>Placar geral</span>
             <strong>VS</strong>
-            <button id="closeTodayBtn" class="btn btn-primary manager-only">Fechar rodada de hoje</button>
+            <button id="closeTodayBtn" class="btn btn-primary manager-only">Recalcular rodada de hoje</button>
           </div>
           <div class="team-score blue">
             <span>Time Azul</span>
@@ -202,7 +203,7 @@
 
             <p class="note">
               Controle exclusivo do gerente. Cada vendedor tem um lançamento por dia; se salvar novamente na mesma data,
-              o valor anterior será atualizado.
+              o valor anterior será atualizado. Ao salvar, o sistema já recalcula a rodada do dia, os gols e o bônus da dezena automaticamente.
             </p>
           </article>
 
@@ -230,38 +231,32 @@
 
             <div class="form-grid">
               <label>
-                Data
+                Data para conferir/recalcular
                 <input id="roundDate" type="date" />
               </label>
-              <button id="closeRoundBtn" class="btn btn-primary">Fechar rodada</button>
+              <button id="closeRoundBtn" class="btn btn-primary">Recalcular rodada automática</button>
             </div>
 
             <div class="divider"></div>
 
-            <p class="eyebrow">Bônus da dezena</p>
+            <p class="eyebrow">Automação do bônus da dezena</p>
             <p class="muted">
-              O gerente escolhe como aplicar o bônus porque a regra “maior meta batida” ainda precisa ser confirmada.
+              O bônus não precisa ser lançado manualmente. Quando o gerente salva ou corrige uma venda,
+              o sistema recalcula a rodada do dia e atualiza automaticamente o bônus da dezena.
+              Nesta versão, “maior meta batida” é tratado como maior faturamento acumulado da dezena.
             </p>
 
             <div class="form-grid">
               <label>
-                Dezena
+                Dezena para conferência
                 <select id="bonusDezena">
                   <option value="1">1ª dezena — dias 01 a 10</option>
                   <option value="2">2ª dezena — dias 11 a 20</option>
                   <option value="3">3ª dezena — dias 21 a 30</option>
                 </select>
               </label>
-              <label>
-                Cálculo do bônus
-                <select id="bonusMode">
-                  <option value="autoSales">Automático: maior faturamento da dezena</option>
-                  <option value="manualVerde">Manual: Time Verde</option>
-                  <option value="manualAzul">Manual: Time Azul</option>
-                  <option value="none">Sem vencedor / empate</option>
-                </select>
-              </label>
-              <button id="applyBonusBtn" class="btn btn-light full-span">Aplicar bônus de +3 gols</button>
+              <button id="applyBonusBtn" class="btn btn-light">Recalcular bônus automático</button>
+              <button id="recalculateAllBtn" class="btn btn-blue full-span">Recalcular placar completo</button>
             </div>
           </article>
 

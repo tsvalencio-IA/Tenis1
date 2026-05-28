@@ -337,6 +337,86 @@ function winnerFromTotals(totals) {
   return Number(totals.verde || 0) > Number(totals.azul || 0) ? "verde" : "azul";
 }
 
+function hasSalesForDate(date) {
+  return salesArray().some((sale) => sale.date === date && Number(sale.amount || 0) > 0);
+}
+
+function hasSalesForDezena(dezena) {
+  const [start, end] = dateRangeForDezena(dezena);
+  return salesArray().some((sale) => sale.date >= start && sale.date <= end && Number(sale.amount || 0) > 0);
+}
+
+function buildAutomaticRound(date) {
+  const totals = getTeamTotalsForDate(date);
+  const winnerTeam = winnerFromTotals(totals);
+  const goalsAwarded = winnerTeam ? getGoalsForDate(date) : 0;
+  return {
+    id: date,
+    date,
+    dezena: getDezena(date),
+    teamTotals: totals,
+    winnerTeam,
+    goalsAwarded,
+    source: "automatico",
+    ruleUsed: "Automático: maior faturamento diário.",
+    closedBy: "sistema",
+    closedAt: new Date().toISOString()
+  };
+}
+
+function recomputeRoundForDate(date) {
+  if (!date || !hasSalesForDate(date)) {
+    if (date) delete state.data.rounds[date];
+    return null;
+  }
+  const round = buildAutomaticRound(date);
+  state.data.rounds[date] = round;
+  return round;
+}
+
+function buildAutomaticBonus(dezena) {
+  const [start, end] = dateRangeForDezena(dezena);
+  const totals = getTeamTotalsForRange(start, end);
+  const winnerTeam = winnerFromTotals(totals);
+  return {
+    id: `dezena_${dezena}`,
+    dezena: Number(dezena),
+    startDate: start,
+    endDate: end,
+    teamTotals: totals,
+    winnerTeam,
+    goalsAwarded: winnerTeam ? 3 : 0,
+    source: "automatico",
+    ruleUsed: "Automático: maior faturamento acumulado da dezena.",
+    closedBy: "sistema",
+    closedAt: new Date().toISOString()
+  };
+}
+
+function recomputeBonusForDezena(dezena) {
+  if (!dezena || !hasSalesForDezena(dezena)) {
+    if (dezena) delete state.data.bonuses[`dezena_${dezena}`];
+    return null;
+  }
+  const bonus = buildAutomaticBonus(dezena);
+  state.data.bonuses[`dezena_${dezena}`] = bonus;
+  return bonus;
+}
+
+function recomputeAutomaticsForDate(date) {
+  const round = recomputeRoundForDate(date);
+  const bonus = recomputeBonusForDezena(getDezena(date));
+  return { round, bonus };
+}
+
+function recomputeAllAutomatics() {
+  state.data.rounds = {};
+  state.data.bonuses = {};
+  const dates = [...new Set(salesArray().map((sale) => sale.date).filter(Boolean))].sort();
+  dates.forEach((date) => recomputeRoundForDate(date));
+  [1, 2, 3].forEach((dezena) => recomputeBonusForDezena(dezena));
+}
+
 function calculateScore() {
   const score = { verde: { goals: 0, sales: 0, wins: 0 }, azul: { goals: 0, sales: 0, wins: 0 } };
   salesArray().forEach((sale) => {
@@ -682,6 +762,32 @@ function renderSellerPanel() {
 function renderDailySales() {
   const date = $("saleDate")?.value || isoToday();
   if ($("dailyTitle")) $("dailyTitle").textContent = date.split("-").reverse().join("/");
+
+  const totals = getTeamTotalsForDate(date);
+  const winnerTeam = winnerFromTotals(totals);
+  const goals = winnerTeam ? getGoalsForDate(date) : 0;
+  const round = state.data.rounds?.[date];
+
+  const groupSummary = `
+    <div class="daily-group-summary">
+      <div class="daily-group-card verde ${winnerTeam === "verde" ? "winner" : ""}">
+        <span>Time Verde</span>
+        <strong>${brl(totals.verde || 0)}</strong>
+        <small>Isack + Viviane</small>
+      </div>
+      <div class="daily-group-card azul ${winnerTeam === "azul" ? "winner" : ""}">
+        <span>Time Azul</span>
+        <strong>${brl(totals.azul || 0)}</strong>
+        <small>Matheus + Brian</small>
+      </div>
+      <div class="daily-result-card">
+        <span>Resultado do dia</span>
+        <strong>${winnerTeam ? `${teamName(winnerTeam)} +${goals} gol(s)` : "Empate / sem vencedor"}</strong>
+        <small>${round ? "Rodada automática calculada" : "Ao lançar venda, o sistema calcula automaticamente"}</small>
+      </div>
+    </div>
+  `;
+
   const rows = vendorsArray({ activeOnly: true }).map((vendor) => {
     const sale = salesArray().find((item) => item.date === date && item.vendorId === vendor.id);
     return `
@@ -694,25 +800,32 @@ function renderDailySales() {
       </div>
     `;
   }).join("");
-  if ($("dailySalesList")) $("dailySalesList").innerHTML = rows;
+
+  if ($("dailySalesList")) {
+    $("dailySalesList").innerHTML = `
+      ${groupSummary}
+      <div class="daily-individual-title">Vendas individuais do dia</div>
+      ${rows}
+    `;
+  }
 }
 
 function renderRounds() {
   const roundRows = roundsArray().sort((a, b) => String(b.date).localeCompare(String(a.date))).map((round) => `
     <div class="timeline-row">
       <strong>${round.date.split("-").reverse().join("/")} — ${round.winnerTeam ? teamName(round.winnerTeam) : "Empate"}</strong>
-      <span>Verde ${brl(round.teamTotals?.verde || 0)} x Azul ${brl(round.teamTotals?.azul || 0)} • ${round.goalsAwarded || 0} gol(s)</span>
+      <span>Automático • Verde ${brl(round.teamTotals?.verde || 0)} x Azul ${brl(round.teamTotals?.azul || 0)} • ${round.goalsAwarded || 0} gol(s)</span>
     </div>
   `).join("");
 
   const bonusRows = bonusesArray().sort((a, b) => Number(b.dezena) - Number(a.dezena)).map((bonus) => `
     <div class="timeline-row bonus">
-      <strong>Bônus ${bonus.dezena}ª dezena — ${bonus.winnerTeam ? teamName(bonus.winnerTeam) : "Sem vencedor"}</strong>
+      <strong>Bônus automático ${bonus.dezena}ª dezena — ${bonus.winnerTeam ? teamName(bonus.winnerTeam) : "Sem vencedor"}</strong>
       <span>${bonus.startDate} a ${bonus.endDate} • +${bonus.goalsAwarded || 0} gol(s) • ${escapeHtml(bonus.ruleUsed || "")}</span>
     </div>
   `).join("");
 
-  $("roundHistory").innerHTML = bonusRows + roundRows || `<p class="muted">Nenhuma rodada fechada ainda.</p>`;
+  $("roundHistory").innerHTML = bonusRows + roundRows || `<p class="muted">Nenhuma rodada calculada ainda. Ao salvar vendas, o sistema atualiza automaticamente.</p>`;
 }
 
 function renderVendorAdmin() {
@@ -937,15 +1050,15 @@ function renderRules() {
     ["Loja", state.data.settings?.store || campaign.store],
     ["Período", `${state.data.settings?.startDate || campaign.startDate} a ${state.data.settings?.endDate || campaign.endDate}`],
     ["Formato", "Disputa por duplas / times internos: Time Verde x Time Azul."],
-    ["Controle", "Somente o gerente cadastra, edita figurinhas, envia fotos, lança vendas, fecha rodadas e aplica bônus."],
+    ["Controle", "Somente o gerente cadastra, edita figurinhas, envia fotos e lança vendas. Rodadas, gols e bônus são calculados automaticamente pelo sistema."],
     ["Acesso vendedor", "Vendedor apenas acompanha placar, ranking, vendas, álbum e figurinhas. Não altera dados."],
     ["Produtos", state.data.settings?.productsRule || "Todos os produtos da loja contam."],
-    ["Lançamento", "O gerente lança vendas por vendedor. O sistema soma automaticamente por equipe."],
+    ["Lançamento", "O gerente lança vendas por vendedor. Ao salvar, o sistema soma por equipe, atualiza a rodada do dia, aplica os gols e recalcula o bônus da dezena."],
     ["Regra diária", "A dupla com maior faturamento no dia marca gol."],
     ["Dias 01 a 10", "Vitória do dia = 1 gol."],
     ["Dias 11 a 20", "Vitória do dia = 2 gols."],
     ["Dias 21 a 30", "Vitória do dia = 3 gols."],
-    ["Bônus da dezena", "+3 gols para a dupla definida pelo gerente. Pode ser automático por faturamento da dezena ou manual."],
+    ["Bônus da dezena", "+3 gols automáticos para a dupla com maior faturamento acumulado na dezena. Se a venda for corrigida, o bônus é recalculado."],
     ["Artilheiro individual", "Vendedor com maior faturamento acumulado no mês."],
     ["Prêmio dupla campeã", state.data.settings?.prizes?.teamChampion || campaign.prizes?.teamChampion],
     ["Prêmio artilheiro", state.data.settings?.prizes?.topSeller || campaign.prizes?.topSeller],
@@ -1015,68 +1128,52 @@ async function saveSale(event) {
     createdBy: "gerente",
     updatedAt: new Date().toISOString()
   };
+
+  recomputeAutomaticsForDate(date);
   await persist();
+
   $("saleAmount").value = "";
   $("saleNote").value = "";
-  toast("Venda salva pelo gerente.");
+  const round = state.data.rounds[date];
+  const bonus = state.data.bonuses[`dezena_${getDezena(date)}`];
+  const roundText = round?.winnerTeam
+    ? `${teamName(round.winnerTeam)} recebeu ${round.goalsAwarded} gol(s) da rodada.`
+    : "Rodada empatada no momento.";
+  const bonusText = bonus?.winnerTeam
+    ? `Bônus da ${getDezena(date)}ª dezena recalculado para ${teamName(bonus.winnerTeam)}.`
+    : `Bônus da ${getDezena(date)}ª dezena sem vencedor no momento.`;
+  toast(`Venda salva. ${roundText} ${bonusText}`);
 }
 
 async function closeRound(date) {
-  if (!ensureCanSave("fechar rodada")) return;
-  if (!date) return toast("Escolha uma data para fechar.");
-  const totals = getTeamTotalsForDate(date);
-  const winnerTeam = winnerFromTotals(totals);
-  const goalsAwarded = winnerTeam ? getGoalsForDate(date) : 0;
-  state.data.rounds[date] = {
-    id: date,
-    date,
-    dezena: getDezena(date),
-    teamTotals: totals,
-    winnerTeam,
-    goalsAwarded,
-    closedBy: "gerente",
-    closedAt: new Date().toISOString()
-  };
+  if (!ensureCanSave("recalcular rodada automática")) return;
+  if (!date) return toast("Escolha uma data para recalcular.");
+  const { round, bonus } = recomputeAutomaticsForDate(date);
   await persist();
-  toast(winnerTeam ? `${teamName(winnerTeam)} venceu a rodada e marcou ${goalsAwarded} gol(s).` : "Rodada empatada. Nenhum gol aplicado.");
+  if (!round) return toast("Nenhuma venda encontrada para essa data.");
+  const roundText = round.winnerTeam
+    ? `${teamName(round.winnerTeam)} venceu a rodada e recebeu ${round.goalsAwarded} gol(s).`
+    : "Rodada empatada. Nenhum gol aplicado.";
+  const bonusText = bonus?.winnerTeam
+    ? ` Bônus da ${round.dezena}ª dezena atualizado para ${teamName(bonus.winnerTeam)}.`
+    : ` Bônus da ${round.dezena}ª dezena sem vencedor no momento.`;
+  toast(roundText + bonusText);
 }
 
 async function applyBonus() {
-  if (!ensureCanSave("aplicar bônus")) return;
+  if (!ensureCanSave("recalcular bônus automático")) return;
   const dezena = Number($("bonusDezena").value || 1);
-  const mode = $("bonusMode").value;
-  const [start, end] = dateRangeForDezena(dezena);
-  const totals = getTeamTotalsForRange(start, end);
-
-  let winnerTeam = null;
-  let ruleUsed = "";
-  if (mode === "autoSales") {
-    winnerTeam = winnerFromTotals(totals);
-    ruleUsed = "Automático: maior faturamento da dezena.";
-  } else if (mode === "manualVerde") {
-    winnerTeam = "verde";
-    ruleUsed = "Manual do gerente: Time Verde.";
-  } else if (mode === "manualAzul") {
-    winnerTeam = "azul";
-    ruleUsed = "Manual do gerente: Time Azul.";
-  } else {
-    ruleUsed = "Sem vencedor / empate definido pelo gerente.";
-  }
-
-  state.data.bonuses[`dezena_${dezena}`] = {
-    id: `dezena_${dezena}`,
-    dezena,
-    startDate: start,
-    endDate: end,
-    teamTotals: totals,
-    winnerTeam,
-    goalsAwarded: winnerTeam ? 3 : 0,
-    ruleUsed,
-    closedBy: "gerente",
-    closedAt: new Date().toISOString()
-  };
+  const bonus = recomputeBonusForDezena(dezena);
   await persist();
-  toast(winnerTeam ? `Bônus aplicado: ${teamName(winnerTeam)} recebeu +3 gols.` : "Bônus registrado sem vencedor.");
+  if (!bonus) return toast(`Nenhuma venda encontrada na ${dezena}ª dezena.`);
+  toast(bonus.winnerTeam ? `Bônus automático: ${teamName(bonus.winnerTeam)} recebeu +3 gols.` : "Bônus automático recalculado sem vencedor.");
+}
+
+async function recalculateAllAutomatics() {
+  if (!ensureCanSave("recalcular placar automático")) return;
+  recomputeAllAutomatics();
+  await persist();
+  toast("Placar, rodadas e bônus recalculados automaticamente.");
 }
 
 async function uploadPhoto(vendorId) {
@@ -1350,6 +1447,7 @@ function bindEvents() {
   $("closeTodayBtn").addEventListener("click", () => closeRound(isoToday()));
   $("closeRoundBtn").addEventListener("click", () => closeRound($("roundDate").value));
   $("applyBonusBtn").addEventListener("click", applyBonus);
+  $("recalculateAllBtn")?.addEventListener("click", recalculateAllAutomatics);
   $("addVendorBtn").addEventListener("click", addVendor);
   $("seedBtn").addEventListener("click", async () => {
     if (!ensureCanSave("recriar dados")) return;
