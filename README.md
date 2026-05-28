@@ -51,3 +51,33 @@ O gerente pode usar os botões de recálculo apenas para conferência ou correç
 Suba todos os arquivos na raiz do repositório e publique pelo GitHub Pages.
 
 thIAguinho Soluções — tecnologia sob medida.
+
+## Guia do gerente
+
+Abra `guia-gerente.html` para o treinamento completo do gerente, com o fluxo automático individual + grupo.
+
+
+## Guia automático do gerente
+
+O arquivo `guia-gerente.html` é um guia profissional interativo.
+
+Como usar:
+1. Abra `guia-gerente.html`.
+2. Clique em **Iniciar guia automático**.
+3. O guia vai apresentar as etapas com narração por voz.
+4. Use **Próxima etapa**, **Voltar**, **Repetir voz** ou **Pausar voz**.
+5. Ao final, clique em **Abrir sistema** para operar o `index.html`.
+
+O guia explica:
+- senha do gerente `2026`;
+- senha dos vendedores `vendas`;
+- cadastro de vendedores;
+- edição de figurinhas;
+- envio de fotos;
+- lançamento de vendas;
+- venda individual e total por grupo;
+- cálculo automático de gols;
+- bônus automático da dezena;
+- ranking e artilheiro;
+- auditoria operacional;
+- geração do álbum e relatórios.
