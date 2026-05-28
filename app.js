@@ -113,6 +113,13 @@ function buildStickerCard(vendor, index, options = {}) {
         </div>
         <p class="sticker-caption-note">${escapeHtml(getVendorHeadline(vendor, rarity))}</p>
         ${showActions ? `
+          <label class="sticker-config-label">Raridade da figurinha</label>
+          <select class="sticker-rarity-select" data-rarity-select="${escapeHtml(vendor.id)}">
+            <option value="legendary" ${rarity.key === 'legendary' ? 'selected' : ''}>Lendária</option>
+            <option value="gold" ${rarity.key === 'gold' ? 'selected' : ''}>Ouro</option>
+            <option value="silver" ${rarity.key === 'silver' ? 'selected' : ''}>Prata</option>
+            <option value="classic" ${rarity.key === 'classic' ? 'selected' : ''}>Clássica</option>
+          </select>
           <div class="sticker-card-actions">
             <button class="btn btn-light" data-upload="${escapeHtml(vendor.id)}">Enviar foto</button>
             <button class="btn btn-outline" data-clear-photo="${escapeHtml(vendor.id)}">Limpar</button>
@@ -166,7 +173,7 @@ function updateTrialUI() {
     el.classList.toggle("expired", info.expired);
   });
 
-  document.querySelectorAll("#saleForm button, #closeTodayBtn, #closeRoundBtn, [data-bonus], [data-upload], [data-clear-photo], #seedBtn")
+  document.querySelectorAll("#saleForm button, #closeTodayBtn, #closeRoundBtn, [data-bonus], [data-upload], [data-clear-photo], [data-rarity-select], #seedBtn")
     .forEach((el) => el.classList.toggle("trial-lock", info.expired));
 
   return info;
@@ -303,6 +310,8 @@ function createSeedData() {
       name: vendor.name,
       team: vendor.team,
       nickname: vendor.nickname || "Craque de vendas",
+      shirtNumber: vendor.shirtNumber || "",
+      rarity: vendor.rarity || "classic",
       imageUrl: ""
     };
   });
@@ -581,19 +590,16 @@ function calculateSellerRanking() {
 }
 
 function getStickerRarityMap() {
-  const ranking = calculateSellerRanking();
-  const definitions = [
-    { key: "legendary", label: "Lendária", shortLabel: "Holo", note: "Destaque máximo da coleção" },
-    { key: "gold", label: "Ouro", shortLabel: "Ouro", note: "Grande destaque" },
-    { key: "silver", label: "Prata", shortLabel: "Prata", note: "Figurinha premium" },
-    { key: "classic", label: "Clássica", shortLabel: "Clássica", note: "Figurinha oficial da coleção" }
-  ];
+  const definitions = {
+    legendary: { key: "legendary", label: "Lendária", shortLabel: "Holo", note: "Destaque máximo da coleção" },
+    gold: { key: "gold", label: "Ouro", shortLabel: "Ouro", note: "Grande destaque" },
+    silver: { key: "silver", label: "Prata", shortLabel: "Prata", note: "Figurinha premium" },
+    classic: { key: "classic", label: "Clássica", shortLabel: "Clássica", note: "Figurinha oficial da coleção" }
+  };
   const map = {};
-  ranking.forEach((vendor, index) => {
-    map[vendor.id] = definitions[index] || definitions[definitions.length - 1];
-  });
-  vendorsArray().forEach((vendor, index) => {
-    if (!map[vendor.id]) map[vendor.id] = definitions[Math.min(index, definitions.length - 1)];
+  vendorsArray().forEach((vendor) => {
+    const key = vendor?.rarity || "classic";
+    map[vendor.id] = definitions[key] || definitions.classic;
   });
   return map;
 }
@@ -881,6 +887,15 @@ function renderStickers() {
       await downloadElementAsImage(card, `figurinha-${vendor?.name || vendorId}.png`, 3);
     });
   });
+
+  document.querySelectorAll("[data-rarity-select]").forEach((select) => {
+    select.addEventListener("change", async () => {
+      const vendorId = select.dataset.raritySelect;
+      const rarity = select.value || "classic";
+      const saved = await updatePath(`copaTenisOne/vendors/${vendorId}`, { rarity });
+      if (saved) toast("Raridade da figurinha atualizada.");
+    });
+  });
 }
 
 function renderRules() {
@@ -895,7 +910,8 @@ function renderRules() {
     ["Teste gratuito", `${TRIAL_DAYS} dias. Após o prazo, novos dados não serão salvos.`],
     ["Sugestões e alterações", `Enviar para o ${CONTACT_TEXT}.`],
     ["Prêmio dupla campeã", campaign.prizes?.teamChampion || "A definir"],
-    ["Prêmio artilheiro", campaign.prizes?.topSeller || "A definir"]
+    ["Prêmio artilheiro", campaign.prizes?.topSeller || "A definir"],
+    ["Raridade das figurinhas", "Definição manual por vendedor: Lendária, Ouro, Prata ou Clássica."]
   ];
 
   $("rulesBox").innerHTML = rows.map(([label, value]) => `

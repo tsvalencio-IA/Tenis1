@@ -1096,3 +1096,25 @@ code {
 .sticker-card-actions .full-download {
   grid-column: 1 / -1;
 }
+
+.sticker-config-label {
+  display: block;
+  margin-bottom: 6px;
+  color: #4d6256;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+.sticker-rarity-select {
+  width: 100%;
+  min-height: 42px;
+  border-radius: 14px;
+  border: 1px solid rgba(8,100,58,.16);
+  background: #fff;
+  color: #193227;
+  font-weight: 800;
+  padding: 0 12px;
+  margin-bottom: 12px;
+}
