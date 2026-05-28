@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Copa do Mundo das Vendas — Tênis One</title>
+  <link rel="stylesheet" href="./styles.css" />
+  <script src="https://upload-widget.cloudinary.com/global/all.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
+  <script src="./config.js"></script>
+</head>
+<body>
+  <div id="loginScreen" class="login-screen">
+    <div class="login-card">
+      <div class="brand-ball">⚽</div>
+      <p class="eyebrow">Demonstração para Tênis One</p>
+      <h1>Copa do Mundo das Vendas</h1>
+      <p class="muted">
+        Placar digital da gincana do Saulo: duplas, faturamento diário, gols por dezena,
+        artilheiro individual e figurinhas dos vendedores.
+      </p>
+      <label class="field">
+        PIN de acesso
+        <input id="pinInput" type="password" placeholder="Digite o PIN" autocomplete="off" />
+      </label>
+      <button id="loginBtn" class="btn btn-primary">Entrar no sistema</button>
+      <p id="loginError" class="error-text"></p>
+      <p class="micro">PIN padrão da demo: <strong>2026</strong>. Altere em <code>config.js</code>.</p>
+    </div>
+  </div>
+
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">Tênis One — Shopping Cidade Norte</p>
+      <h1>Copa do Mundo das Vendas</h1>
+      <p id="connectionStatus" class="status-pill">Carregando...</p>
+    </div>
+    <div class="top-actions">
+      <button id="seedBtn" class="btn btn-light">Recriar dados demo</button>
+      <button id="pdfBtn" class="btn btn-blue">Gerar relatório PDF</button>
+      <button id="logoutBtn" class="btn btn-outline">Sair</button>
+    </div>
+  </header>
+
+  <main class="app-shell">
+    <nav class="tabs" aria-label="Navegação principal">
+      <button class="tab active" data-view="dashboard">Placar</button>
+      <button class="tab" data-view="sales">Lançar vendas</button>
+      <button class="tab" data-view="rounds">Rodadas</button>
+      <button class="tab" data-view="stickers">Figurinhas</button>
+      <button class="tab" data-view="settings">Configuração</button>
+    </nav>
+
+    <section id="dashboard" class="view active">
+      <div class="hero-panel">
+        <div>
+          <p class="eyebrow">Regra ativa</p>
+          <h2 id="todayRule">Hoje vale gol</h2>
+          <p class="muted">
+            A dupla que tiver o maior faturamento do dia marca gol. Dias 01–10 valem 1 gol,
+            dias 11–20 valem 2 gols e dias 21–30 valem 3 gols.
+          </p>
+        </div>
+        <div class="cup">🏆</div>
+      </div>
+
+      <div class="score-grid">
+        <article id="team-verde" class="team-card green-card">
+          <div class="team-head">
+            <span class="team-dot green"></span>
+            <h3>Time Verde</h3>
+          </div>
+          <div class="score-number" id="scoreVerde">0</div>
+          <p class="muted">gols acumulados</p>
+          <div class="team-meta">
+            <span id="salesVerde">R$ 0,00</span>
+            <span id="winsVerde">0 vitórias</span>
+          </div>
+          <div id="membersVerde" class="avatar-row"></div>
+        </article>
+
+        <article id="team-azul" class="team-card blue-card">
+          <div class="team-head">
+            <span class="team-dot blue"></span>
+            <h3>Time Azul</h3>
+          </div>
+          <div class="score-number" id="scoreAzul">0</div>
+          <p class="muted">gols acumulados</p>
+          <div class="team-meta">
+            <span id="salesAzul">R$ 0,00</span>
+            <span id="winsAzul">0 vitórias</span>
+          </div>
+          <div id="membersAzul" class="avatar-row"></div>
+        </article>
+
+        <article class="info-card">
+          <p class="eyebrow">Artilheiro individual</p>
+          <h3 id="topSellerName">Ainda sem vendas</h3>
+          <p id="topSellerValue" class="big-money">R$ 0,00</p>
+          <p class="muted">Vendedor com maior faturamento acumulado no mês.</p>
+        </article>
+
+        <article class="info-card">
+          <p class="eyebrow">Rodada de hoje</p>
+          <h3 id="todayStatus">Aberta</h3>
+          <p id="todayTotals" class="muted">Lance as vendas do dia para calcular o vencedor.</p>
+          <button id="closeTodayBtn" class="btn btn-primary full-btn">Fechar rodada de hoje</button>
+        </article>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <p class="eyebrow">Ranking individual</p>
+            <h2>Artilharia da Copa</h2>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Posição</th>
+                <th>Vendedor</th>
+                <th>Equipe</th>
+                <th>Faturamento</th>
+                <th>Participação</th>
+              </tr>
+            </thead>
+            <tbody id="sellerRanking"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="sales" class="view">
+      <div class="grid-2">
+        <article class="card">
+          <div class="card-head">
+            <div>
+              <p class="eyebrow">Lançamento do gerente</p>
+              <h2>Registrar faturamento diário</h2>
+            </div>
+          </div>
+          <form id="saleForm" class="form-grid">
+            <label class="field">
+              Data da venda
+              <input id="saleDate" type="date" required />
+            </label>
+            <label class="field">
+              Vendedor
+              <select id="saleVendor" required></select>
+            </label>
+            <label class="field">
+              Valor vendido no dia
+              <input id="saleAmount" type="number" min="0" step="0.01" placeholder="Ex.: 1250.90" required />
+            </label>
+            <label class="field">
+              Observação
+              <input id="saleNote" placeholder="Opcional" />
+            </label>
+            <button class="btn btn-primary full-span" type="submit">Salvar lançamento</button>
+          </form>
+          <p class="note">
+            Nesta demo, cada vendedor tem um lançamento por dia. Se salvar novamente na mesma data,
+            o valor anterior será atualizado.
+          </p>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <div>
+              <p class="eyebrow">Vendas do dia</p>
+              <h2 id="dailyTitle">Hoje</h2>
+            </div>
+          </div>
+          <div id="dailySalesList" class="sales-list"></div>
+        </article>
+      </div>
+    </section>
+
+    <section id="rounds" class="view">
+      <div class="grid-2">
+        <article class="card">
+          <div class="card-head">
+            <div>
+              <p class="eyebrow">Fechamento</p>
+              <h2>Fechar rodada por data</h2>
+            </div>
+          </div>
+          <div class="form-grid">
+            <label class="field">
+              Data
+              <input id="roundDate" type="date" />
+            </label>
+            <button id="closeRoundBtn" class="btn btn-primary">Fechar rodada</button>
+          </div>
+          <div class="divider"></div>
+          <p class="eyebrow">Bônus da dezena</p>
+          <p class="muted">
+            Como o Saulo ainda não definiu “maior meta batida”, esta demo usa maior faturamento da dezena.
+            Essa regra pode ser alterada no sistema final.
+          </p>
+          <div class="bonus-actions">
+            <button class="btn btn-light" data-bonus="1">Aplicar bônus 1ª dezena</button>
+            <button class="btn btn-light" data-bonus="2">Aplicar bônus 2ª dezena</button>
+            <button class="btn btn-light" data-bonus="3">Aplicar bônus 3ª dezena</button>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <div>
+              <p class="eyebrow">Histórico</p>
+              <h2>Rodadas fechadas</h2>
+            </div>
+          </div>
+          <div id="roundHistory" class="timeline"></div>
+        </article>
+      </div>
+    </section>
+
+    <section id="stickers" class="view">
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <p class="eyebrow">Álbum da Copa</p>
+            <h2>Figurinhas dos vendedores</h2>
+          </div>
+          <button id="downloadStickerPackBtn" class="btn btn-blue">Baixar álbum em PDF</button>
+        </div>
+        <p class="muted">
+          Com Cloudinary configurado, o botão envia a foto para a nuvem. Sem Cloudinary, a imagem fica salva na base/local como demonstração.
+        </p>
+        <div id="stickerGrid" class="sticker-grid"></div>
+      </div>
+    </section>
+
+    <section id="settings" class="view">
+      <div class="grid-2">
+        <article class="card">
+          <div class="card-head">
+            <div>
+              <p class="eyebrow">Campanha</p>
+              <h2>Regras carregadas</h2>
+            </div>
+          </div>
+          <div id="rulesBox" class="rules-box"></div>
+        </article>
+        <article class="card">
+          <div class="card-head">
+            <div>
+              <p class="eyebrow">Integrações</p>
+              <h2>Firebase e Cloudinary</h2>
+            </div>
+          </div>
+          <div class="checklist">
+            <p id="firebaseCheck">Firebase: verificando...</p>
+            <p id="cloudinaryCheck">Cloudinary: verificando...</p>
+            <p class="note">
+              Edite o arquivo <code>config.js</code> com as credenciais reais antes de publicar para o Saulo.
+              O app continua funcionando em modo local para apresentação.
+            </p>
+          </div>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast" role="status"></div>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
