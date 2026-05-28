@@ -4,366 +4,363 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Copa do Mundo das Vendas — Tênis One</title>
-  <link rel="stylesheet" href="./styles.css" />
+  <link rel="stylesheet" href="styles.css" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
-  <script src="./config.js"></script>
+  <script src="config.js" defer></script>
+  <script src="app.js" defer></script>
 </head>
 <body>
-  <div id="loginScreen" class="login-screen">
+  <div id="toast" class="toast"></div>
+
+  <section id="loginScreen" class="login-screen">
     <div class="login-card">
-      <div class="brand-ball">⚽</div>
-      <p class="eyebrow">Demonstração para Tênis One</p>
+      <div class="login-badge">⚽ Demonstração oficial</div>
       <h1>Copa do Mundo das Vendas</h1>
-      <p class="muted">
-        Placar digital da gincana do Saulo: duplas, faturamento diário, gols por dezena,
-        artilheiro individual e figurinhas dos vendedores.
+      <p>
+        Sistema demonstrativo da gincana da Tênis One: placar por duplas, ranking individual,
+        rodadas por dia, bônus por dezena e álbum de figurinhas controlado pelo gerente.
       </p>
-      <div id="trialLoginNotice" class="trial-notice">
-        Teste gratuito por 3 dias. Após esse prazo, novos dados não serão salvos.
+
+      <div class="login-grid">
+        <label>
+          Perfil de acesso
+          <select id="loginRole">
+            <option value="manager">Gerente / Administrador</option>
+            <option value="seller">Vendedor / Acompanhamento</option>
+          </select>
+        </label>
+
+        <label id="sellerPickerWrap" class="hidden">
+          Escolha seu nome
+          <select id="sellerPicker"></select>
+        </label>
+
+        <label>
+          Senha
+          <input id="loginPassword" type="password" placeholder="Digite a senha de acesso" />
+        </label>
       </div>
-      <label class="field">
-        Perfil de acesso
-        <select id="profileSelect">
-          <option value="manager">Gerente / Administrador</option>
-          <option value="vendor">Vendedor / Acompanhamento</option>
-        </select>
-      </label>
-      <label id="vendorLoginBox" class="field" hidden>
-        Escolha seu perfil de vendedor
-        <select id="loginVendorSelect"></select>
-      </label>
-      <label class="field">
-        <span id="pinLabel">PIN do gerente</span>
-        <input id="pinInput" type="password" placeholder="Digite o PIN" autocomplete="off" />
-      </label>
-      <button id="loginBtn" class="btn btn-primary">Entrar no sistema</button>
-      <p id="loginError" class="error-text"></p>
-      <p class="micro">Acesso demonstrativo fornecido pela thIAguinho Soluções.</p>
-    </div>
-  </div>
 
-  <header class="topbar">
-    <div>
-      <p class="eyebrow">Tênis One — Shopping Cidade Norte</p>
-      <h1>Copa do Mundo das Vendas</h1>
-      <p id="connectionStatus" class="status-pill">Preparando sistema...</p>
-      <p id="trialStatus" class="trial-status">Teste gratuito por 3 dias.</p>
-      <p id="sessionStatus" class="role-status">Perfil gerente: controle total do sistema.</p>
-    </div>
-    <div class="top-actions">
-      <button id="seedBtn" class="btn btn-light" data-manager-only>Recriar dados demo</button>
-      <button id="pdfBtn" class="btn btn-blue" data-manager-only>Gerar relatório PDF</button>
-      <button id="logoutBtn" class="btn btn-outline">Sair</button>
-    </div>
-  </header>
+      <button id="loginBtn" class="btn btn-primary wide">Entrar no sistema</button>
 
-  <main class="app-shell">
-    <nav class="tabs" aria-label="Navegação principal">
-      <button class="tab active" data-view="dashboard">Placar</button>
-      <button class="tab" data-view="sales" data-manager-only>Lançar vendas</button>
-      <button class="tab" data-view="rounds" data-manager-only>Rodadas</button>
-      <button class="tab" data-view="stickers">Figurinhas</button>
-      <button class="tab" data-view="settings">Regras</button>
-    </nav>
+      <div id="trialLoginNotice" class="trial-notice"></div>
 
-    <section id="dashboard" class="view active">
-      <div class="hero-panel">
+      <div class="login-hint">
+        <strong>Acesso gerente:</strong> senha 2026<br>
+        <strong>Acesso vendedores:</strong> senha vendas
+      </div>
+    </div>
+  </section>
+
+  <main id="appShell" class="app-shell hidden">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-icon">🏆</div>
         <div>
-          <p class="eyebrow">Regra ativa</p>
-          <h2 id="todayRule">Hoje vale gol</h2>
-          <p class="muted">
-            A dupla que tiver o maior faturamento do dia marca gol. Dias 01–10 valem 1 gol,
-            dias 11–20 valem 2 gols e dias 21–30 valem 3 gols.
-          </p>
-        </div>
-        <div class="cup">🏆</div>
-      </div>
-
-      <div class="score-grid">
-        <article id="team-verde" class="team-card green-card">
-          <div class="team-head">
-            <span class="team-dot green"></span>
-            <h3>Time Verde</h3>
-          </div>
-          <div class="score-number" id="scoreVerde">0</div>
-          <p class="muted">gols acumulados</p>
-          <div class="team-meta">
-            <span id="salesVerde">R$ 0,00</span>
-            <span id="winsVerde">0 vitórias</span>
-          </div>
-          <div id="membersVerde" class="avatar-row"></div>
-        </article>
-
-        <article id="team-azul" class="team-card blue-card">
-          <div class="team-head">
-            <span class="team-dot blue"></span>
-            <h3>Time Azul</h3>
-          </div>
-          <div class="score-number" id="scoreAzul">0</div>
-          <p class="muted">gols acumulados</p>
-          <div class="team-meta">
-            <span id="salesAzul">R$ 0,00</span>
-            <span id="winsAzul">0 vitórias</span>
-          </div>
-          <div id="membersAzul" class="avatar-row"></div>
-        </article>
-
-        <article class="info-card">
-          <p class="eyebrow">Artilheiro individual</p>
-          <h3 id="topSellerName">Ainda sem vendas</h3>
-          <p id="topSellerValue" class="big-money">R$ 0,00</p>
-          <p class="muted">Vendedor com maior faturamento acumulado no mês.</p>
-        </article>
-
-        <article class="info-card">
-          <p class="eyebrow">Rodada de hoje</p>
-          <h3 id="todayStatus">Aberta</h3>
-          <p id="todayTotals" class="muted">Lance as vendas do dia para calcular o vencedor.</p>
-          <button id="closeTodayBtn" class="btn btn-primary full-btn" data-manager-only>Fechar rodada de hoje</button>
-        </article>
-      </div>
-
-      <div class="card">
-        <div class="card-head">
-          <div>
-            <p class="eyebrow">Ranking individual</p>
-            <h2>Artilharia da Copa</h2>
-          </div>
-        </div>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Posição</th>
-                <th>Vendedor</th>
-                <th>Equipe</th>
-                <th>Faturamento</th>
-                <th>Participação</th>
-              </tr>
-            </thead>
-            <tbody id="sellerRanking"></tbody>
-          </table>
+          <strong>Copa das Vendas</strong>
+          <span>Tênis One</span>
         </div>
       </div>
-    </section>
 
-    <section id="sales" class="view">
-      <div class="grid-2">
+      <div class="profile-box">
+        <span id="activeProfileLabel">Perfil</span>
+        <strong id="activeUserLabel">Usuário</strong>
+      </div>
+
+      <nav>
+        <button class="nav-btn active" data-view="dashboard">Placar</button>
+        <button class="nav-btn seller-only" data-view="sellerPanel">Meu desempenho</button>
+        <button class="nav-btn manager-only" data-view="sales">Lançar vendas</button>
+        <button class="nav-btn manager-only" data-view="rounds">Rodadas e bônus</button>
+        <button class="nav-btn manager-only" data-view="vendors">Gerenciar vendedores</button>
+        <button class="nav-btn" data-view="album">Álbum e figurinhas</button>
+        <button class="nav-btn manager-only" data-view="report">Relatórios</button>
+        <button class="nav-btn" data-view="rules">Regras da campanha</button>
+      </nav>
+
+      <div class="side-footer">
+        <div id="trialStatus" class="trial-status"></div>
+        <button id="logoutBtn" class="btn btn-outline wide">Sair</button>
+      </div>
+    </aside>
+
+    <section class="content">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Tênis One — Shopping Cidade Norte</p>
+          <h1 id="pageTitle">Placar da Gincana</h1>
+        </div>
+        <div class="top-actions manager-only">
+          <button id="seedBtn" class="btn btn-light">Recriar dados demo</button>
+          <button id="downloadReportBtn" class="btn btn-blue">Relatório PDF</button>
+        </div>
+      </header>
+
+      <section id="dashboard" class="view active">
+        <div class="hero-score">
+          <div class="team-score green">
+            <span>Time Verde</span>
+            <strong id="greenGoals">0</strong>
+            <small>gols</small>
+            <p id="greenSales">R$ 0,00</p>
+          </div>
+          <div class="score-center">
+            <span>Placar geral</span>
+            <strong>VS</strong>
+            <button id="closeTodayBtn" class="btn btn-primary manager-only">Fechar rodada de hoje</button>
+          </div>
+          <div class="team-score blue">
+            <span>Time Azul</span>
+            <strong id="blueGoals">0</strong>
+            <small>gols</small>
+            <p id="blueSales">R$ 0,00</p>
+          </div>
+        </div>
+
+        <div class="grid-3">
+          <article class="stat-card">
+            <span>Rodada atual vale</span>
+            <strong id="todayGoals">0 gol(s)</strong>
+            <p id="todayDezena">Conforme a dezena do mês</p>
+          </article>
+          <article class="stat-card">
+            <span>Artilheiro individual</span>
+            <strong id="topSellerName">A definir</strong>
+            <p id="topSellerAmount">R$ 0,00</p>
+          </article>
+          <article class="stat-card">
+            <span>Líder atual</span>
+            <strong id="leaderTeam">Empate</strong>
+            <p>Critério: gols, depois faturamento</p>
+          </article>
+        </div>
+
+        <div class="grid-2">
+          <article class="card">
+            <div class="card-head">
+              <div>
+                <p class="eyebrow">Ranking individual</p>
+                <h2>Artilharia de vendas</h2>
+              </div>
+            </div>
+            <div id="sellerRanking" class="ranking-list"></div>
+          </article>
+
+          <article class="card">
+            <div class="card-head">
+              <div>
+                <p class="eyebrow">Times</p>
+                <h2>Resumo por dupla</h2>
+              </div>
+            </div>
+            <div id="teamSummary" class="team-summary"></div>
+          </article>
+        </div>
+      </section>
+
+      <section id="sellerPanel" class="view">
         <article class="card">
           <div class="card-head">
             <div>
-              <p class="eyebrow">Lançamento do gerente</p>
-              <h2>Registrar faturamento diário</h2>
+              <p class="eyebrow">Área do vendedor</p>
+              <h2>Meu desempenho</h2>
             </div>
           </div>
-          <form id="saleForm" class="form-grid">
-            <label class="field">
-              Data da venda
-              <input id="saleDate" type="date" required />
-            </label>
-            <label class="field">
-              Vendedor
-              <select id="saleVendor" required></select>
-            </label>
-            <label class="field">
-              Valor vendido no dia
-              <input id="saleAmount" type="number" min="0" step="0.01" placeholder="Ex.: 1250.90" required />
-            </label>
-            <label class="field">
-              Observação
-              <input id="saleNote" placeholder="Opcional" />
-            </label>
-            <button class="btn btn-primary full-span" type="submit">Salvar lançamento</button>
-          </form>
-          <p class="note">
-            Nesta demo, cada vendedor tem um lançamento por dia. Se salvar novamente na mesma data,
-            o valor anterior será atualizado.
-          </p>
+          <div id="sellerPersonalPanel" class="seller-panel"></div>
         </article>
+      </section>
 
-        <article class="card">
-          <div class="card-head">
-            <div>
-              <p class="eyebrow">Vendas do dia</p>
-              <h2 id="dailyTitle">Hoje</h2>
+      <section id="sales" class="view">
+        <div class="grid-2">
+          <article class="card">
+            <div class="card-head">
+              <div>
+                <p class="eyebrow">Gerente</p>
+                <h2>Lançamento diário de vendas</h2>
+              </div>
             </div>
-          </div>
-          <div id="dailySalesList" class="sales-list"></div>
-        </article>
-      </div>
-    </section>
 
-    <section id="rounds" class="view">
-      <div class="grid-2">
-        <article class="card">
-          <div class="card-head">
-            <div>
-              <p class="eyebrow">Fechamento</p>
-              <h2>Fechar rodada por data</h2>
+            <form id="saleForm" class="form-grid">
+              <label>
+                Data da venda
+                <input id="saleDate" type="date" required />
+              </label>
+              <label>
+                Vendedor
+                <select id="saleVendor" required></select>
+              </label>
+              <label>
+                Valor vendido no dia
+                <input id="saleAmount" type="number" min="0" step="0.01" placeholder="Ex.: 1250.90" required />
+              </label>
+              <label>
+                Observação
+                <input id="saleNote" placeholder="Opcional" />
+              </label>
+              <button class="btn btn-primary full-span" type="submit">Salvar lançamento</button>
+            </form>
+
+            <p class="note">
+              Controle exclusivo do gerente. Cada vendedor tem um lançamento por dia; se salvar novamente na mesma data,
+              o valor anterior será atualizado.
+            </p>
+          </article>
+
+          <article class="card">
+            <div class="card-head">
+              <div>
+                <p class="eyebrow">Vendas do dia</p>
+                <h2 id="dailyTitle">Hoje</h2>
+              </div>
             </div>
-          </div>
-          <div class="form-grid">
-            <label class="field">
-              Data
-              <input id="roundDate" type="date" />
-            </label>
-            <button id="closeRoundBtn" class="btn btn-primary">Fechar rodada</button>
-          </div>
-          <div class="divider"></div>
-          <p class="eyebrow">Bônus da dezena</p>
-          <p class="muted">
-            Como o Saulo ainda não definiu “maior meta batida”, esta demo usa maior faturamento da dezena.
-            Essa regra pode ser alterada no sistema final.
-          </p>
-          <div class="bonus-actions">
-            <button class="btn btn-light" data-bonus="1">Aplicar bônus 1ª dezena</button>
-            <button class="btn btn-light" data-bonus="2">Aplicar bônus 2ª dezena</button>
-            <button class="btn btn-light" data-bonus="3">Aplicar bônus 3ª dezena</button>
-          </div>
-        </article>
-
-        <article class="card">
-          <div class="card-head">
-            <div>
-              <p class="eyebrow">Histórico</p>
-              <h2>Rodadas fechadas</h2>
-            </div>
-          </div>
-          <div id="roundHistory" class="timeline"></div>
-        </article>
-      </div>
-    </section>
-
-    <section id="stickers" class="view">
-      <div class="card">
-        <div class="card-head">
-          <div>
-            <p class="eyebrow">Álbum da Copa</p>
-            <h2>Figurinhas dos vendedores</h2>
-          </div>
-          <div class="album-actions"><button id="downloadStickerPackBtn" class="btn btn-blue">Baixar álbum em PDF</button><button id="downloadAlbumPngBtn" class="btn btn-light">Baixar prévia do álbum em PNG</button></div>
+            <div id="dailySalesList" class="sales-list"></div>
+          </article>
         </div>
-        <p class="muted">
-          No perfil gerente, cadastre fotos, raridades e dados das figurinhas. No perfil vendedor, esta área fica apenas para acompanhar o álbum e as figurinhas.
-        </p>
+      </section>
 
-        <div id="vendorManagerPanel" class="manager-only manager-panel">
-          <div class="card-head">
-            <div>
-              <p class="eyebrow">Cadastro do gerente</p>
-              <h2>Cadastro e configuração dos vendedores</h2>
+      <section id="rounds" class="view">
+        <div class="grid-2">
+          <article class="card">
+            <div class="card-head">
+              <div>
+                <p class="eyebrow">Gerente</p>
+                <h2>Fechamento de rodada</h2>
+              </div>
             </div>
-          </div>
-          <div class="form-grid">
-            <label class="field">
-              Editar vendedor
-              <select id="vendorEditSelect"></select>
-            </label>
-            <label class="field">
-              Nome
-              <input id="vendorNameInput" placeholder="Nome do vendedor" />
-            </label>
-            <label class="field">
-              Equipe
-              <select id="vendorTeamInput">
-                <option value="verde">Time Verde</option>
-                <option value="azul">Time Azul</option>
-              </select>
-            </label>
-            <label class="field">
-              Apelido / título
-              <input id="vendorNicknameInput" placeholder="Ex.: Artilheiro, Capitão, Camisa 10" />
-            </label>
-            <label class="field">
-              Número da camisa
-              <input id="vendorShirtInput" type="number" min="1" max="99" placeholder="Ex.: 10" />
-            </label>
-            <label class="field">
-              Raridade
-              <select id="vendorRarityInput">
-                <option value="legendary">Lendária</option>
-                <option value="gold">Ouro</option>
-                <option value="silver">Prata</option>
-                <option value="classic">Clássica</option>
-              </select>
-            </label>
-            <button id="saveVendorBtn" class="btn btn-primary full-span" type="button">Salvar cadastro do vendedor</button>
-          </div>
-          <p class="note">
-            Somente o gerente altera cadastro, equipe, número, raridade e fotos. O vendedor apenas acompanha.
-          </p>
-        </div>
 
-        <div class="album-showcase">
-          <article class="album-cover-card">
-            <div class="album-cover-badge">Edição especial 2026</div>
-            <h3>Álbum da Copa das Vendas</h3>
-            <p>Coleção exclusiva da campanha da loja com figurinhas, destaques e espaços especiais.</p>
-            <div class="album-cover-footer">
-              <span id="albumCoverStore">Tênis One</span>
-              <strong id="albumCoverProgress">0/0 figurinhas prontas</strong>
+            <div class="form-grid">
+              <label>
+                Data
+                <input id="roundDate" type="date" />
+              </label>
+              <button id="closeRoundBtn" class="btn btn-primary">Fechar rodada</button>
+            </div>
+
+            <div class="divider"></div>
+
+            <p class="eyebrow">Bônus da dezena</p>
+            <p class="muted">
+              O gerente escolhe como aplicar o bônus porque a regra “maior meta batida” ainda precisa ser confirmada.
+            </p>
+
+            <div class="form-grid">
+              <label>
+                Dezena
+                <select id="bonusDezena">
+                  <option value="1">1ª dezena — dias 01 a 10</option>
+                  <option value="2">2ª dezena — dias 11 a 20</option>
+                  <option value="3">3ª dezena — dias 21 a 30</option>
+                </select>
+              </label>
+              <label>
+                Cálculo do bônus
+                <select id="bonusMode">
+                  <option value="autoSales">Automático: maior faturamento da dezena</option>
+                  <option value="manualVerde">Manual: Time Verde</option>
+                  <option value="manualAzul">Manual: Time Azul</option>
+                  <option value="none">Sem vencedor / empate</option>
+                </select>
+              </label>
+              <button id="applyBonusBtn" class="btn btn-light full-span">Aplicar bônus de +3 gols</button>
             </div>
           </article>
-          <div class="album-side-panel">
-            <div id="albumStats" class="album-stats"></div>
-            <div class="album-page-card">
-              <div class="card-head small-head">
-                <div>
-                  <p class="eyebrow">Página demonstrativa</p>
-                  <h3>Prévia do álbum</h3>
-                </div>
+
+          <article class="card">
+            <div class="card-head">
+              <div>
+                <p class="eyebrow">Histórico</p>
+                <h2>Rodadas e bônus</h2>
               </div>
-              <div id="albumPageGrid" class="album-page-grid"></div>
+            </div>
+            <div id="roundHistory" class="timeline"></div>
+          </article>
+        </div>
+      </section>
+
+      <section id="vendors" class="view">
+        <div class="card">
+          <div class="card-head">
+            <div>
+              <p class="eyebrow">Gerente</p>
+              <h2>Cadastro e editor das figurinhas</h2>
+            </div>
+            <button id="addVendorBtn" class="btn btn-primary">Adicionar vendedor</button>
+          </div>
+          <p class="muted">
+            Só o gerente altera vendedores, fotos, títulos, raridade, número da camisa, ordem no álbum e destaques.
+          </p>
+          <div id="vendorAdminGrid" class="vendor-admin-grid"></div>
+        </div>
+      </section>
+
+      <section id="album" class="view">
+        <div class="card">
+          <div class="card-head">
+            <div>
+              <p class="eyebrow">Álbum da Copa</p>
+              <h2>Figurinhas dos vendedores</h2>
+            </div>
+            <div class="album-actions">
+              <button id="downloadStickerPackBtn" class="btn btn-blue manager-only">Baixar álbum PDF</button>
+              <button id="downloadAlbumPngBtn" class="btn btn-light manager-only">Baixar álbum PNG</button>
             </div>
           </div>
-        </div>
-        <div id="stickerGrid" class="sticker-grid"></div>
-      </div>
-    </section>
+          <p class="muted">
+            Vendedores visualizam. Gerente controla fotos, raridade, títulos e destaques no menu “Gerenciar vendedores”.
+          </p>
 
-    <section id="settings" class="view">
-      <div class="grid-2">
+          <div class="album-showcase">
+            <article class="album-cover-card">
+              <div class="album-cover-badge">Edição especial 2026</div>
+              <h3>Álbum da Copa das Vendas</h3>
+              <p>Coleção exclusiva da campanha da loja, com figurinhas, destaques e espaços especiais.</p>
+              <div class="album-cover-footer">
+                <span id="albumCoverStore">Tênis One</span>
+                <strong id="albumCoverProgress">0/0 figurinhas prontas</strong>
+              </div>
+            </article>
+
+            <div class="album-side-panel">
+              <div id="albumStats" class="album-stats"></div>
+              <div class="album-page-card">
+                <div id="albumPageGrid"></div>
+              </div>
+            </div>
+          </div>
+
+          <div id="stickerGrid" class="sticker-grid"></div>
+        </div>
+      </section>
+
+      <section id="report" class="view">
         <article class="card">
           <div class="card-head">
             <div>
-              <p class="eyebrow">Campanha</p>
-              <h2>Regras carregadas</h2>
+              <p class="eyebrow">Gerente</p>
+              <h2>Relatórios e exportações</h2>
+            </div>
+          </div>
+          <div class="report-actions">
+            <button id="downloadReportBtn2" class="btn btn-blue">Baixar relatório PDF</button>
+            <button id="downloadStickerPackBtn2" class="btn btn-primary">Baixar álbum PDF</button>
+            <button id="exportJsonBtn" class="btn btn-light">Exportar dados JSON</button>
+          </div>
+          <div id="reportSummary" class="report-summary"></div>
+        </article>
+      </section>
+
+      <section id="rules" class="view">
+        <article class="card">
+          <div class="card-head">
+            <div>
+              <p class="eyebrow">Fonte da verdade</p>
+              <h2>Regras da campanha</h2>
             </div>
           </div>
           <div id="rulesBox" class="rules-box"></div>
         </article>
-        <article class="card">
-          <div class="card-head">
-            <div>
-              <p class="eyebrow">Premiação</p>
-              <h2>Prêmios da campanha</h2>
-            </div>
-          </div>
-          <div class="checklist">
-            <p><strong>Dupla campeã:</strong> R$ 100,00 via PIX para cada integrante + 1 folga premiada para cada um.</p>
-            <p><strong>Artilheiro individual:</strong> R$ 100,00 via PIX para quem mais vender no acumulado do mês.</p>
-            <p class="note">
-              O bônus de dezena foi aplicado nesta demonstração como maior faturamento da dezena. Essa regra pode ser ajustada na versão final.
-            </p>
-          </div>
-        </article>
-
-        <article class="card contact-card">
-          <div class="card-head">
-            <div>
-              <p class="eyebrow">Teste gratuito</p>
-              <h2>Sugestões e alterações</h2>
-            </div>
-          </div>
-          <p>
-            Esta versão é uma demonstração gratuita por 3 dias. Para solicitar ajustes, melhorias ou aprovação da próxima etapa, envie as sugestões para o WhatsApp do <strong>Thiago Ventura Valêncio</strong>.
-          </p>
-        </article>
-      </div>
+      </section>
     </section>
   </main>
-
-  <div id="toast" class="toast" role="status"></div>
-  <script type="module" src="./app.js"></script>
 </body>
 </html>
