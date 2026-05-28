@@ -22,7 +22,18 @@
         Teste gratuito por 3 dias. Após esse prazo, novos dados não serão salvos.
       </div>
       <label class="field">
-        PIN de acesso
+        Perfil de acesso
+        <select id="profileSelect">
+          <option value="manager">Gerente / Administrador</option>
+          <option value="vendor">Vendedor / Acompanhamento</option>
+        </select>
+      </label>
+      <label id="vendorLoginBox" class="field" hidden>
+        Escolha seu perfil de vendedor
+        <select id="loginVendorSelect"></select>
+      </label>
+      <label class="field">
+        <span id="pinLabel">PIN do gerente</span>
         <input id="pinInput" type="password" placeholder="Digite o PIN" autocomplete="off" />
       </label>
       <button id="loginBtn" class="btn btn-primary">Entrar no sistema</button>
@@ -37,10 +48,11 @@
       <h1>Copa do Mundo das Vendas</h1>
       <p id="connectionStatus" class="status-pill">Preparando sistema...</p>
       <p id="trialStatus" class="trial-status">Teste gratuito por 3 dias.</p>
+      <p id="sessionStatus" class="role-status">Perfil gerente: controle total do sistema.</p>
     </div>
     <div class="top-actions">
-      <button id="seedBtn" class="btn btn-light">Recriar dados demo</button>
-      <button id="pdfBtn" class="btn btn-blue">Gerar relatório PDF</button>
+      <button id="seedBtn" class="btn btn-light" data-manager-only>Recriar dados demo</button>
+      <button id="pdfBtn" class="btn btn-blue" data-manager-only>Gerar relatório PDF</button>
       <button id="logoutBtn" class="btn btn-outline">Sair</button>
     </div>
   </header>
@@ -48,8 +60,8 @@
   <main class="app-shell">
     <nav class="tabs" aria-label="Navegação principal">
       <button class="tab active" data-view="dashboard">Placar</button>
-      <button class="tab" data-view="sales">Lançar vendas</button>
-      <button class="tab" data-view="rounds">Rodadas</button>
+      <button class="tab" data-view="sales" data-manager-only>Lançar vendas</button>
+      <button class="tab" data-view="rounds" data-manager-only>Rodadas</button>
       <button class="tab" data-view="stickers">Figurinhas</button>
       <button class="tab" data-view="settings">Regras</button>
     </nav>
@@ -107,7 +119,7 @@
           <p class="eyebrow">Rodada de hoje</p>
           <h3 id="todayStatus">Aberta</h3>
           <p id="todayTotals" class="muted">Lance as vendas do dia para calcular o vencedor.</p>
-          <button id="closeTodayBtn" class="btn btn-primary full-btn">Fechar rodada de hoje</button>
+          <button id="closeTodayBtn" class="btn btn-primary full-btn" data-manager-only>Fechar rodada de hoje</button>
         </article>
       </div>
 
@@ -232,8 +244,56 @@
           <div class="album-actions"><button id="downloadStickerPackBtn" class="btn btn-blue">Baixar álbum em PDF</button><button id="downloadAlbumPngBtn" class="btn btn-light">Baixar prévia do álbum em PNG</button></div>
         </div>
         <p class="muted">
-          Envie a foto de cada vendedor, ajuste manualmente a raridade de cada figurinha e gere uma prévia de álbum em padrão premium.
+          No perfil gerente, cadastre fotos, raridades e dados das figurinhas. No perfil vendedor, esta área fica apenas para acompanhar o álbum e as figurinhas.
         </p>
+
+        <div id="vendorManagerPanel" class="manager-only manager-panel">
+          <div class="card-head">
+            <div>
+              <p class="eyebrow">Cadastro do gerente</p>
+              <h2>Cadastro e configuração dos vendedores</h2>
+            </div>
+          </div>
+          <div class="form-grid">
+            <label class="field">
+              Editar vendedor
+              <select id="vendorEditSelect"></select>
+            </label>
+            <label class="field">
+              Nome
+              <input id="vendorNameInput" placeholder="Nome do vendedor" />
+            </label>
+            <label class="field">
+              Equipe
+              <select id="vendorTeamInput">
+                <option value="verde">Time Verde</option>
+                <option value="azul">Time Azul</option>
+              </select>
+            </label>
+            <label class="field">
+              Apelido / título
+              <input id="vendorNicknameInput" placeholder="Ex.: Artilheiro, Capitão, Camisa 10" />
+            </label>
+            <label class="field">
+              Número da camisa
+              <input id="vendorShirtInput" type="number" min="1" max="99" placeholder="Ex.: 10" />
+            </label>
+            <label class="field">
+              Raridade
+              <select id="vendorRarityInput">
+                <option value="legendary">Lendária</option>
+                <option value="gold">Ouro</option>
+                <option value="silver">Prata</option>
+                <option value="classic">Clássica</option>
+              </select>
+            </label>
+            <button id="saveVendorBtn" class="btn btn-primary full-span" type="button">Salvar cadastro do vendedor</button>
+          </div>
+          <p class="note">
+            Somente o gerente altera cadastro, equipe, número, raridade e fotos. O vendedor apenas acompanha.
+          </p>
+        </div>
+
         <div class="album-showcase">
           <article class="album-cover-card">
             <div class="album-cover-badge">Edição especial 2026</div>

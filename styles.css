@@ -1118,3 +1118,35 @@ code {
   padding: 0 12px;
   margin-bottom: 12px;
 }
+
+.role-status {
+  margin: 8px 0 0;
+  display: inline-flex;
+  max-width: 780px;
+  padding: 9px 12px;
+  border-radius: 14px;
+  background: #fff8db;
+  border: 1px solid #efd77b;
+  color: #664c00;
+  font-weight: 900;
+  font-size: 13px;
+}
+
+.role-status.viewer {
+  background: #eef4ff;
+  border-color: #cddbf8;
+  color: #183b72;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+.manager-panel {
+  margin: 18px 0;
+  padding: 18px;
+  border-radius: 22px;
+  background: linear-gradient(180deg, #fffef8, #ffffff);
+  border: 1px solid rgba(8, 100, 58, .14);
+  box-shadow: 0 14px 34px rgba(7, 45, 24, .08);
+}

@@ -6,6 +6,7 @@ const TRIAL_DAYS = Number(CONFIG.trialDays || 3);
 const CONTACT_TEXT = `${CONFIG.contactChannel || "WhatsApp"} do ${CONFIG.contactPerson || "Thiago Ventura Valêncio"}`;
 const TRIAL_KEY = "copa_tenis_one_trial_started_at";
 const LOCAL_STATE_KEY = "copa_tenis_one_state";
+const SESSION_KEY = "copa_tenis_one_session";
 let services = {};
 
 const state = {
@@ -18,10 +19,85 @@ const state = {
     rounds: {},
     bonuses: {},
     settings: campaign
-  }
+  },
+  session: null
 };
 
 const $ = (id) => document.getElementById(id);
+
+function getSession() {
+  if (state.session) return state.session;
+  try {
+    const raw = sessionStorage.getItem(SESSION_KEY);
+    state.session = raw ? JSON.parse(raw) : null;
+  } catch {
+    state.session = null;
+  }
+  return state.session;
+}
+
+function setSession(session) {
+  state.session = session;
+  sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  sessionStorage.setItem("copa_logged", "1");
+}
+
+function clearSession() {
+  state.session = null;
+  sessionStorage.removeItem(SESSION_KEY);
+  sessionStorage.removeItem("copa_logged");
+}
+
+function isManager() {
+  return getSession()?.role === "manager";
+}
+
+function isVendor() {
+  return getSession()?.role === "vendor";
+}
+
+function currentVendorId() {
+  return getSession()?.vendorId || "";
+}
+
+function currentVendor() {
+  const id = currentVendorId();
+  return id ? state.data.vendors?.[id] : null;
+}
+
+function switchView(viewId) {
+  if (!isManager() && ["sales", "rounds"].includes(viewId)) {
+    toast("Este acesso é apenas para acompanhar vendas, ranking e figurinhas.");
+    viewId = "dashboard";
+  }
+  document.querySelectorAll(".tab").forEach((item) => item.classList.toggle("active", item.dataset.view === viewId));
+  document.querySelectorAll(".view").forEach((view) => view.classList.toggle("active", view.id === viewId));
+}
+
+function applyRoleUI() {
+  const manager = isManager();
+  document.querySelectorAll("[data-manager-only]").forEach((el) => {
+    el.hidden = !manager;
+  });
+  document.querySelectorAll(".manager-only").forEach((el) => {
+    el.style.display = manager ? "" : "none";
+  });
+  const sessionStatus = $("sessionStatus");
+  if (sessionStatus) {
+    sessionStatus.textContent = manager
+      ? "Perfil gerente: você controla cadastros, vendas, fotos, raridades, rodadas e relatórios."
+      : "Perfil vendedor: você acompanha placar, ranking e figurinhas. Alterações são feitas pelo gerente.";
+    sessionStatus.classList.toggle("viewer", !manager);
+  }
+  const activeView = document.querySelector(".view.active")?.id;
+  if (!manager && ["sales", "rounds"].includes(activeView)) switchView("dashboard");
+}
+
+function managerGuard(action = "alterar dados") {
+  if (isManager()) return true;
+  toast(`Apenas o gerente pode ${action}. Seu perfil é somente para acompanhamento.`);
+  return false;
+}
 
 function brl(value) {
   return Number(value || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -259,6 +335,7 @@ function localSave() {
 }
 
 async function savePath(path, value) {
+  if (!managerGuard("salvar novos dados")) return false;
   if (!ensureCanSave("salvar novos dados")) return false;
 
   if (state.mode === "firebase" && state.db) {
@@ -274,6 +351,7 @@ async function savePath(path, value) {
 }
 
 async function updatePath(path, value) {
+  if (!managerGuard("salvar alterações")) return false;
   if (!ensureCanSave("salvar alterações")) return false;
 
   if (state.mode === "firebase" && state.db) {
@@ -865,8 +943,78 @@ function renderRounds() {
   $("roundHistory").innerHTML = bonusRows + roundRows || `<p class="muted">Nenhuma rodada fechada ainda.</p>`;
 }
 
+
+function slugifyId(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "") || `vendedor_${Date.now()}`;
+}
+
+function renderVendorEditor() {
+  const select = $("vendorEditSelect");
+  if (!select) return;
+
+  const current = select.value || vendorsArray()[0]?.id || "__new";
+  select.innerHTML = `<option value="__new">+ Novo vendedor</option>` + vendorsArray().map((vendor) => `
+    <option value="${escapeHtml(vendor.id)}">${escapeHtml(vendor.name)} — ${escapeHtml(teamName(vendor.team))}</option>
+  `).join("");
+
+  if ([...select.options].some((opt) => opt.value === current)) {
+    select.value = current;
+  } else {
+    select.value = vendorsArray()[0]?.id || "__new";
+  }
+
+  fillVendorEditor(select.value);
+}
+
+function fillVendorEditor(vendorId) {
+  const vendor = vendorId && vendorId !== "__new" ? state.data.vendors?.[vendorId] : null;
+  if ($("vendorNameInput")) $("vendorNameInput").value = vendor?.name || "";
+  if ($("vendorTeamInput")) $("vendorTeamInput").value = vendor?.team || "verde";
+  if ($("vendorNicknameInput")) $("vendorNicknameInput").value = vendor?.nickname || "";
+  if ($("vendorShirtInput")) $("vendorShirtInput").value = vendor?.shirtNumber || "";
+  if ($("vendorRarityInput")) $("vendorRarityInput").value = vendor?.rarity || "classic";
+}
+
+async function saveVendorProfile() {
+  if (!managerGuard("salvar cadastro de vendedor")) return;
+
+  const selected = $("vendorEditSelect")?.value || "__new";
+  const name = $("vendorNameInput")?.value.trim();
+  if (!name) return toast("Informe o nome do vendedor.");
+
+  let id = selected !== "__new" ? selected : slugifyId(name);
+  if (selected === "__new" && state.data.vendors?.[id]) {
+    id = `${id}_${Date.now().toString().slice(-4)}`;
+  }
+
+  const existing = state.data.vendors?.[id] || {};
+  const vendor = {
+    ...existing,
+    id,
+    name,
+    team: $("vendorTeamInput")?.value || "verde",
+    nickname: $("vendorNicknameInput")?.value.trim() || "Craque de vendas",
+    shirtNumber: Number($("vendorShirtInput")?.value || existing.shirtNumber || 10),
+    rarity: $("vendorRarityInput")?.value || existing.rarity || "classic",
+    imageUrl: existing.imageUrl || ""
+  };
+
+  const saved = await savePath(`copaTenisOne/vendors/${id}`, vendor);
+  if (saved) {
+    toast("Cadastro do vendedor salvo pelo gerente.");
+    if ($("vendorEditSelect")) $("vendorEditSelect").value = id;
+  }
+}
+
+
 function renderStickers() {
-  $("stickerGrid").innerHTML = vendorsArray().map((vendor, index) => buildStickerCard(vendor, index, { showActions: true })).join("");
+  const canEdit = isManager();
+  $("stickerGrid").innerHTML = vendorsArray().map((vendor, index) => buildStickerCard(vendor, index, { showActions: canEdit })).join("");
 
   document.querySelectorAll("[data-upload]").forEach((button) => {
     button.addEventListener("click", () => uploadPhoto(button.dataset.upload));
@@ -923,14 +1071,17 @@ function renderRules() {
 }
 
 function render() {
+  populateLoginVendors();
   renderVendorSelect();
   renderDashboard();
   renderDailySales();
   renderRounds();
+  renderVendorEditor();
   renderAlbumShowcase();
   renderStickers();
   renderRules();
   updateTrialUI();
+  applyRoleUI();
 }
 
 async function uploadPhoto(vendorId) {
@@ -1119,16 +1270,55 @@ async function exportReportPDF(stickersOnly = false) {
   pdf.save("relatorio-copa-vendas-tenis-one.pdf");
 }
 
+function populateLoginVendors() {
+  const select = $("loginVendorSelect");
+  if (!select) return;
+  select.innerHTML = vendorsArray().map((vendor) => `
+    <option value="${escapeHtml(vendor.id)}">${escapeHtml(vendor.name)} — ${escapeHtml(teamName(vendor.team))}</option>
+  `).join("");
+}
+
+function updateLoginMode() {
+  const role = $("profileSelect")?.value || "manager";
+  const vendorBox = $("vendorLoginBox");
+  const pinLabel = $("pinLabel");
+  if (vendorBox) vendorBox.hidden = role !== "vendor";
+  if (pinLabel) pinLabel.textContent = role === "manager" ? "PIN do gerente" : "PIN de acompanhamento";
+}
+
 function bindEvents() {
+  populateLoginVendors();
+  updateLoginMode();
+
+  $("profileSelect")?.addEventListener("change", updateLoginMode);
+
   $("loginBtn").addEventListener("click", () => {
+    const role = $("profileSelect")?.value || "manager";
     const pin = $("pinInput").value.trim();
-    if (pin === (CONFIG.demoPin || "2026")) {
-      $("loginScreen").style.display = "none";
-      sessionStorage.setItem("copa_logged", "1");
-      updateTrialUI();
+    const managerPin = CONFIG.managerPin || CONFIG.demoPin || "2026";
+    const vendorPin = CONFIG.vendorPin || CONFIG.demoPin || "2026";
+
+    if (role === "manager") {
+      if (pin !== managerPin) {
+        $("loginError").textContent = "PIN do gerente incorreto.";
+        return;
+      }
+      setSession({ role: "manager", name: CONFIG.managerName || "Saulo" });
     } else {
-      $("loginError").textContent = "PIN incorreto.";
+      if (pin !== vendorPin) {
+        $("loginError").textContent = "PIN de acompanhamento incorreto.";
+        return;
+      }
+      const vendorId = $("loginVendorSelect")?.value || "";
+      const vendor = state.data.vendors?.[vendorId] || {};
+      setSession({ role: "vendor", vendorId, name: vendor.name || "Vendedor" });
     }
+
+    $("loginScreen").style.display = "none";
+    $("loginError").textContent = "";
+    updateTrialUI();
+    render();
+    switchView("dashboard");
   });
 
   $("pinInput").addEventListener("keydown", (event) => {
@@ -1136,24 +1326,22 @@ function bindEvents() {
   });
 
   $("logoutBtn").addEventListener("click", () => {
-    sessionStorage.removeItem("copa_logged");
+    clearSession();
     location.reload();
   });
 
   document.querySelectorAll(".tab").forEach((tab) => {
-    tab.addEventListener("click", () => {
-      document.querySelectorAll(".tab").forEach((item) => item.classList.remove("active"));
-      document.querySelectorAll(".view").forEach((view) => view.classList.remove("active"));
-      tab.classList.add("active");
-      $(tab.dataset.view).classList.add("active");
-    });
+    tab.addEventListener("click", () => switchView(tab.dataset.view));
   });
 
   $("saleDate").addEventListener("change", render);
   $("roundDate").addEventListener("change", render);
+  $("vendorEditSelect")?.addEventListener("change", (event) => fillVendorEditor(event.target.value));
+  $("saveVendorBtn")?.addEventListener("click", saveVendorProfile);
 
   $("saleForm").addEventListener("submit", async (event) => {
     event.preventDefault();
+    if (!managerGuard("lançar vendas")) return;
     const date = $("saleDate").value;
     const vendorId = $("saleVendor").value;
     const amount = Number($("saleAmount").value || 0);
@@ -1176,16 +1364,36 @@ function bindEvents() {
     toast("Venda salva.");
   });
 
-  $("closeTodayBtn").addEventListener("click", () => closeRound($("saleDate").value || isoToday()));
-  $("closeRoundBtn").addEventListener("click", () => closeRound($("roundDate").value || isoToday()));
-
-  document.querySelectorAll("[data-bonus]").forEach((btn) => {
-    btn.addEventListener("click", () => applyBonus(btn.dataset.bonus));
+  $("closeTodayBtn").addEventListener("click", () => {
+    if (!managerGuard("fechar rodada")) return;
+    closeRound($("saleDate").value || isoToday());
   });
 
-  $("pdfBtn").addEventListener("click", () => exportReportPDF(false));
+  $("closeRoundBtn").addEventListener("click", () => {
+    if (!managerGuard("fechar rodada")) return;
+    closeRound($("roundDate").value || isoToday());
+  });
+
+  document.querySelectorAll("[data-bonus]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      if (!managerGuard("aplicar bônus")) return;
+      applyBonus(btn.dataset.bonus);
+    });
+  });
+
+  $("pdfBtn").addEventListener("click", () => {
+    if (!managerGuard("gerar relatório gerencial")) return;
+    exportReportPDF(false);
+  });
+
   $("downloadStickerPackBtn").addEventListener("click", () => exportReportPDF(true));
+  $("downloadAlbumPngBtn")?.addEventListener("click", async () => {
+    const spread = document.querySelector(".album-spread-book");
+    await downloadElementAsImage(spread, "album-copa-das-vendas-preview.png", 2.8);
+  });
+
   $("seedBtn").addEventListener("click", () => {
+    if (!managerGuard("recriar dados demonstrativos")) return;
     if (confirm("Isso apaga os lançamentos atuais e recria os dados demonstrativos. Continuar?")) {
       seedData(true);
     }
@@ -1194,7 +1402,7 @@ function bindEvents() {
 
 bindEvents();
 
-if (sessionStorage.getItem("copa_logged") === "1") {
+if (sessionStorage.getItem("copa_logged") === "1" && getSession()) {
   $("loginScreen").style.display = "none";
 }
 

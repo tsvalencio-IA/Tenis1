@@ -5,11 +5,33 @@ Demonstração do sistema da gincana de vendas da Tênis One.
 ## Como testar
 
 1. Abra o arquivo `index.html`.
-2. Digite o PIN `2026`.
-3. Lance vendas para os vendedores.
-4. Feche a rodada do dia.
-5. Veja o placar das equipes e a artilharia individual.
-6. Gere o relatório em PDF.
+2. Escolha o perfil: **Gerente / Administrador** ou **Vendedor / Acompanhamento**.
+3. Digite o PIN demonstrativo `2026`.
+4. No perfil gerente, lance vendas, feche rodadas, envie fotos e configure raridades.
+5. No perfil vendedor, acompanhe placar, ranking e figurinhas sem alterar dados.
+6. Feche a rodada do dia no perfil gerente.
+7. Veja o placar das equipes e a artilharia individual.
+8. Gere o relatório em PDF no perfil gerente.
+
+
+## Perfis de acesso
+
+### Gerente / Administrador
+O gerente controla o sistema. Ele pode:
+- lançar vendas;
+- fechar rodadas;
+- aplicar bônus;
+- enviar fotos dos vendedores;
+- definir manualmente quem é Lendária, Ouro, Prata ou Clássica;
+- gerar relatório gerencial;
+- recriar dados demonstrativos.
+
+### Vendedor / Acompanhamento
+O vendedor não cadastra nem altera dados. Ele pode apenas:
+- acompanhar o placar;
+- acompanhar o ranking;
+- ver o álbum e as figurinhas;
+- baixar a prévia do álbum.
 
 ## Teste gratuito
 

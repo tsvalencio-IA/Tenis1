@@ -1,5 +1,8 @@
 window.APP_CONFIG = {
   demoPin: "2026",
+  managerPin: "2026",
+  vendorPin: "2026",
+  managerName: "Saulo",
   trialDays: 3,
   contactPerson: "Thiago Ventura Valêncio",
   contactChannel: "WhatsApp",
@@ -15,10 +18,10 @@ window.APP_CONFIG = {
       azul: { id: "azul", name: "Time Azul", color: "#143f91" }
     },
     vendors: [
-      { id: "isack", name: "Isack", team: "verde", nickname: "Craque de vendas" },
-      { id: "viviane", name: "Viviane", team: "verde", nickname: "Camisa 10" },
-      { id: "matheus", name: "Matheus", team: "azul", nickname: "Artilheiro" },
-      { id: "brian", name: "Brian", team: "azul", nickname: "Capitão" }
+      { id: "isack", name: "Isack", team: "verde", nickname: "Craque de vendas", shirtNumber: 10, rarity: "legendary" },
+      { id: "viviane", name: "Viviane", team: "verde", nickname: "Camisa 8", shirtNumber: 8, rarity: "gold" },
+      { id: "matheus", name: "Matheus", team: "azul", nickname: "Artilheiro", shirtNumber: 7, rarity: "silver" },
+      { id: "brian", name: "Brian", team: "azul", nickname: "Capitão", shirtNumber: 11, rarity: "classic" }
     ],
     prizes: {
       teamChampion: "R$ 100,00 via PIX para cada integrante + 1 folga premiada para cada um.",
