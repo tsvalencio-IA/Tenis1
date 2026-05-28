@@ -476,56 +476,438 @@ th {
   letter-spacing: .06em;
 }
 
-.sticker-grid {
+
+.album-showcase {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 16px;
+  grid-template-columns: 340px 1fr;
+  gap: 18px;
+  margin: 20px 0 18px;
+  align-items: start;
 }
 
-.sticker {
+.album-cover-card,
+.album-page-card,
+.album-stat-card {
   border-radius: 24px;
-  border: 4px solid var(--yellow);
-  overflow: hidden;
-  background: linear-gradient(145deg, var(--green), var(--blue));
-  color: white;
+  background: linear-gradient(145deg, #ffffff, #fffdf6);
+  border: 1px solid var(--line);
   box-shadow: var(--shadow);
 }
 
-.sticker-photo {
-  height: 230px;
-  background: rgba(255,255,255,.16);
+.album-cover-card {
+  position: relative;
+  overflow: hidden;
+  min-height: 100%;
+  padding: 22px;
+  background: linear-gradient(150deg, #08643a, #143f91 68%, #f5c542 130%);
+  color: white;
+}
+
+.album-cover-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 10% 12%, rgba(255,255,255,.22), transparent 32%), linear-gradient(130deg, rgba(255,255,255,.18), rgba(255,255,255,0) 40%, rgba(255,255,255,.22) 58%, rgba(255,255,255,0) 72%);
+  pointer-events: none;
+}
+
+.album-cover-badge {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.18);
+  border: 1px solid rgba(255,255,255,.25);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+
+.album-cover-card h3 {
+  position: relative;
+  z-index: 1;
+  margin: 18px 0 10px;
+  font-size: 34px;
+  line-height: 1.02;
+  letter-spacing: -0.05em;
+}
+
+.album-cover-card p {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  color: rgba(255,255,255,.86);
+  line-height: 1.55;
+}
+
+.album-cover-footer {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 4px;
+  margin-top: 26px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(255,255,255,.18);
+}
+
+.album-cover-footer span {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: rgba(255,255,255,.86);
+}
+
+.album-cover-footer strong {
+  font-size: 22px;
+  letter-spacing: -0.03em;
+}
+
+.album-side-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.album-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.album-stat-card {
+  padding: 16px;
+}
+
+.album-stat-card span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  font-weight: 900;
+}
+
+.album-stat-card strong {
+  display: block;
+  margin: 8px 0 4px;
+  color: var(--green);
+  font-size: 22px;
+  letter-spacing: -0.04em;
+}
+
+.album-stat-card small {
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.album-page-card {
+  padding: 18px;
+}
+
+.small-head h3 {
+  margin: 0;
+  font-size: 24px;
+  letter-spacing: -0.04em;
+  color: var(--green);
+}
+
+.album-page-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.album-slot {
+  min-height: 146px;
+  padding: 12px;
+  border-radius: 18px;
+  border: 1px dashed #d8e3dc;
+  background: linear-gradient(145deg, #fbfcfd, #ffffff);
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  text-align: center;
+}
+
+.album-slot.filled,
+.album-slot.special {
+  border-style: solid;
+}
+
+.album-slot.legendary { border-color: rgba(111,66,193,.35); }
+.album-slot.gold { border-color: rgba(183,121,31,.35); }
+.album-slot.silver { border-color: rgba(102,112,133,.28); }
+.album-slot.classic { border-color: rgba(8,100,58,.22); }
+
+.album-slot-thumb {
+  height: 78px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #f4f8f5, #ffffff);
   display: grid;
   place-items: center;
   overflow: hidden;
 }
 
-.sticker-photo img {
+.album-slot-thumb img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.sticker-photo span {
-  font-size: 58px;
+.album-slot-thumb span {
+  font-size: 28px;
 }
 
-.sticker-body {
-  padding: 16px;
+.album-slot strong {
+  font-size: 14px;
+  letter-spacing: -0.02em;
 }
 
-.sticker-body h3 {
-  margin: 0;
-  font-size: 26px;
+.album-slot span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.sticker-top-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sticker-rarity {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 56px;
+  padding: 5px 8px;
+  border-radius: 999px;
+  color: white;
+  font-weight: 900;
+  font-size: 11px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.sticker-rarity.legendary { background: linear-gradient(90deg, #6f42c1, #8b5cf6); }
+.sticker-rarity.gold { background: linear-gradient(90deg, #b7791f, #d69e2e); }
+.sticker-rarity.silver { background: linear-gradient(90deg, #667085, #98a2b3); }
+.sticker-rarity.classic { background: linear-gradient(90deg, #08643a, #0e8f56); }
+
+.sticker-card-real.rarity-legendary::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, rgba(255,255,255,0) 10%, rgba(255,255,255,.18) 26%, rgba(255,255,255,0) 42%, rgba(111,66,193,.16) 54%, rgba(255,255,255,0) 64%, rgba(255,255,255,.16) 76%, rgba(255,255,255,0) 88%);
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
+
+.sticker-photo-real.legendary {
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,.36), 0 12px 20px rgba(111,66,193,.16);
+}
+
+.sticker-photo-real.gold {
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,.36), 0 12px 20px rgba(183,121,31,.16);
+}
+
+.sticker-note {
+  position: relative;
+  z-index: 1;
+  margin: 0 6px 12px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: #f8fbff;
+  color: #51635a;
+  font-size: 12px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.sticker-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 18px;
+  align-items: start;
+}
+
+.sticker-card-real {
+  position: relative;
+  border-radius: 28px;
+  padding: 12px;
+  background: linear-gradient(145deg, #fffdf6, #ffffff 45%, #f7fafc);
+  border: 1px solid #e9dfb0;
+  box-shadow: 0 24px 42px rgba(7, 45, 24, 0.12);
+  overflow: hidden;
+}
+
+.sticker-card-real::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(130deg, rgba(255,255,255,.92), rgba(255,255,255,0) 36%, rgba(255,255,255,.3) 52%, rgba(255,255,255,0) 68%);
+  pointer-events: none;
+}
+
+.sticker-card-real.green {
+  box-shadow: 0 24px 42px rgba(8,100,58,.16);
+}
+
+.sticker-card-real.blue {
+  box-shadow: 0 24px 42px rgba(20,63,145,.16);
+}
+
+.sticker-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+  padding: 8px 10px;
+  border-radius: 16px;
+  background: linear-gradient(90deg, #fff8db, #fff2ba);
+  border: 1px solid #efd77b;
+  position: relative;
+  z-index: 1;
+}
+
+.sticker-collection {
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: #755600;
+}
+
+.sticker-no {
+  min-width: 42px;
+  text-align: center;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: white;
+  border: 1px solid rgba(117,86,0,.16);
+  color: #755600;
+  font-weight: 900;
+  font-size: 12px;
+}
+
+.sticker-frame {
+  position: relative;
+  border-radius: 24px;
+  padding: 12px;
+  border: 4px solid var(--yellow);
+  overflow: hidden;
+  z-index: 1;
+}
+
+.sticker-frame.green {
+  background: linear-gradient(180deg, #08643a, #0c8d52);
+}
+
+.sticker-frame.blue {
+  background: linear-gradient(180deg, #143f91, #1c61d6);
+}
+
+.sticker-shine {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 14% 10%, rgba(255,255,255,.38), transparent 30%), linear-gradient(122deg, rgba(255,255,255,.18), rgba(255,255,255,0) 48%, rgba(255,255,255,.2) 52%, rgba(255,255,255,0) 68%);
+  pointer-events: none;
+}
+
+.sticker-photo-real {
+  position: relative;
+  height: 320px;
+  border-radius: 20px;
+  overflow: hidden;
+  background: linear-gradient(180deg, rgba(255,255,255,.92), rgba(243,248,244,.98));
+  display: grid;
+  place-items: center;
+  border: 2px solid rgba(255,255,255,.68);
+}
+
+.sticker-photo-real img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.sticker-photo-real span {
+  font-size: 78px;
+  filter: drop-shadow(0 8px 14px rgba(0,0,0,.14));
+}
+
+.sticker-team-ribbon {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 14px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  color: white;
+  font-weight: 900;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  text-align: center;
+  box-shadow: 0 12px 22px rgba(0,0,0,.16);
+}
+
+.sticker-team-ribbon.green {
+  background: linear-gradient(90deg, #054e2d, #08643a);
+}
+
+.sticker-team-ribbon.blue {
+  background: linear-gradient(90deg, #0d2e6b, #143f91);
+}
+
+.sticker-meta-real {
+  position: relative;
+  z-index: 1;
+  padding: 14px 6px 8px;
+}
+
+.sticker-role {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #edf3ff;
+  color: #143f91;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.sticker-meta-real h3 {
+  margin: 10px 0 2px;
+  font-size: 28px;
   letter-spacing: -0.04em;
+  color: var(--text);
 }
 
-.sticker-body p {
-  margin: 4px 0 12px;
-  color: #fff8db;
+.sticker-meta-real p {
+  margin: 0;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.sticker-mini-stats {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 6px 10px;
+  color: #51635a;
+  font-size: 12px;
   font-weight: 800;
 }
 
 .sticker-actions {
+  position: relative;
+  z-index: 1;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
@@ -569,6 +951,14 @@ code {
   .grid-2 {
     grid-template-columns: 1fr;
   }
+
+  .album-showcase {
+    grid-template-columns: 1fr;
+  }
+
+  .album-stats {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 650px) {
@@ -587,6 +977,14 @@ code {
 
   .top-actions .btn {
     width: 100%;
+  }
+
+  .album-page-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .sticker-photo-real {
+    height: 260px;
   }
 }
 

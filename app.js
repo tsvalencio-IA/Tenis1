@@ -27,6 +27,25 @@ function brl(value) {
   return Number(value || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function stickerNumber(index) {
+  return String(index + 1).padStart(2, "0");
+}
+
+function teamAccent(team) {
+  return team === "azul"
+    ? { primary: "#143f91", soft: "#edf3ff", strong: "#0d2e6b" }
+    : { primary: "#08643a", soft: "#eefaf3", strong: "#054e2d" };
+}
+
 function isoToday() {
   const d = new Date();
   const offset = d.getTimezoneOffset();
@@ -447,6 +466,109 @@ function calculateSellerRanking() {
   return Object.values(totals).sort((a, b) => b.total - a.total);
 }
 
+function getStickerRarityMap() {
+  const ranking = calculateSellerRanking();
+  const definitions = [
+    { key: "legendary", label: "Lendária", shortLabel: "Holo", note: "Destaque máximo da coleção" },
+    { key: "gold", label: "Ouro", shortLabel: "Ouro", note: "Grande destaque" },
+    { key: "silver", label: "Prata", shortLabel: "Prata", note: "Figurinha premium" },
+    { key: "classic", label: "Clássica", shortLabel: "Clássica", note: "Figurinha oficial da coleção" }
+  ];
+  const map = {};
+  ranking.forEach((vendor, index) => {
+    map[vendor.id] = definitions[index] || definitions[definitions.length - 1];
+  });
+  vendorsArray().forEach((vendor, index) => {
+    if (!map[vendor.id]) map[vendor.id] = definitions[Math.min(index, definitions.length - 1)];
+  });
+  return map;
+}
+
+function getCollectionSummary() {
+  const vendors = vendorsArray();
+  const withPhotos = vendors.filter((vendor) => !!vendor.imageUrl).length;
+  const score = calculateScore();
+  const ranking = calculateSellerRanking();
+  let leaderTeam = null;
+  if (score.verde.goals !== score.azul.goals) {
+    leaderTeam = score.verde.goals > score.azul.goals ? "verde" : "azul";
+  } else if (score.verde.sales !== score.azul.sales) {
+    leaderTeam = score.verde.sales > score.azul.sales ? "verde" : "azul";
+  }
+  return {
+    total: vendors.length,
+    withPhotos,
+    missingPhotos: vendors.length - withPhotos,
+    topSeller: ranking[0] || null,
+    leaderTeam,
+    rarityMap: getStickerRarityMap()
+  };
+}
+
+function renderAlbumShowcase() {
+  const panel = $("albumStats");
+  const grid = $("albumPageGrid");
+  if (!panel || !grid) return;
+
+  const summary = getCollectionSummary();
+  const progressText = `${summary.withPhotos}/${summary.total} figurinhas prontas`;
+  const leaderText = summary.leaderTeam ? teamName(summary.leaderTeam) : "Empate no momento";
+  const coverStore = $("albumCoverStore");
+  const coverProgress = $("albumCoverProgress");
+  if (coverStore) coverStore.textContent = campaign.store || "Tênis One";
+  if (coverProgress) coverProgress.textContent = progressText;
+
+  panel.innerHTML = `
+    <div class="album-stat-card">
+      <span>Figurinhas prontas</span>
+      <strong>${progressText}</strong>
+      <small>${summary.missingPhotos} vendedor(es) ainda sem foto</small>
+    </div>
+    <div class="album-stat-card">
+      <span>Artilheiro da coleção</span>
+      <strong>${summary.topSeller?.name || "A definir"}</strong>
+      <small>${summary.topSeller ? brl(summary.topSeller.total) : "Sem vendas lançadas"}</small>
+    </div>
+    <div class="album-stat-card">
+      <span>Equipe em destaque</span>
+      <strong>${leaderText}</strong>
+      <small>Líder atual da competição</small>
+    </div>
+  `;
+
+  const slots = vendorsArray().map((vendor) => {
+    const rarity = summary.rarityMap[vendor.id] || { key: "classic", label: "Clássica" };
+    return `
+      <article class="album-slot ${vendor.imageUrl ? "filled" : "empty"} ${rarity.key}">
+        <div class="album-slot-thumb ${vendor.imageUrl ? "has-photo" : ""}">
+          ${vendor.imageUrl ? `<img src="${escapeHtml(vendor.imageUrl)}" alt="${escapeHtml(vendor.name)}" />` : `<span>⚽</span>`}
+        </div>
+        <strong>${escapeHtml(vendor.name)}</strong>
+        <span>${escapeHtml(rarity.label)}</span>
+      </article>
+    `;
+  }).join("");
+
+  const topSeller = summary.topSeller;
+  const specialArtilheiro = `
+    <article class="album-slot special legendary">
+      <div class="album-slot-thumb has-badge"><span>🏅</span></div>
+      <strong>Especial Artilheiro</strong>
+      <span>${escapeHtml(topSeller?.name || "A definir")}</span>
+    </article>
+  `;
+
+  const specialLeader = `
+    <article class="album-slot special gold">
+      <div class="album-slot-thumb has-badge"><span>🏆</span></div>
+      <strong>Especial Campeão</strong>
+      <span>${escapeHtml(leaderText)}</span>
+    </article>
+  `;
+
+  grid.innerHTML = slots + specialArtilheiro + specialLeader;
+}
+
 function winnerFromTotals(totals) {
   if ((totals.verde || 0) === (totals.azul || 0)) return null;
   return (totals.verde || 0) > (totals.azul || 0) ? "verde" : "azul";
@@ -596,21 +718,44 @@ function renderRounds() {
 }
 
 function renderStickers() {
-  $("stickerGrid").innerHTML = vendorsArray().map((vendor) => `
-    <article class="sticker">
-      <div class="sticker-photo">
-        ${vendor.imageUrl ? `<img src="${vendor.imageUrl}" alt="${vendor.name}" />` : `<span>⚽</span>`}
-      </div>
-      <div class="sticker-body">
-        <h3>${vendor.name}</h3>
-        <p>${vendor.nickname || "Craque de vendas"} • ${teamName(vendor.team)}</p>
-        <div class="sticker-actions">
-          <button class="btn btn-light" data-upload="${vendor.id}">Enviar foto</button>
-          <button class="btn btn-outline" data-clear-photo="${vendor.id}">Limpar</button>
+  const rarityMap = getStickerRarityMap();
+  $("stickerGrid").innerHTML = vendorsArray().map((vendor, index) => {
+    const accent = vendor.team === "azul" ? "blue" : "green";
+    const shirt = vendor.team === "azul" ? "Camisa azul" : "Camisa verde";
+    const rarity = rarityMap[vendor.id] || { key: "classic", label: "Clássica", shortLabel: "Clássica", note: "Figurinha oficial da coleção" };
+    return `
+      <article class="sticker-card-real ${accent} rarity-${rarity.key}">
+        <div class="sticker-topbar">
+          <span class="sticker-collection">Coleção Copa das Vendas 2026</span>
+          <div class="sticker-top-meta">
+            <span class="sticker-rarity ${rarity.key}">${escapeHtml(rarity.shortLabel || rarity.label)}</span>
+            <span class="sticker-no">#${stickerNumber(index)}</span>
+          </div>
         </div>
-      </div>
-    </article>
-  `).join("");
+        <div class="sticker-frame ${accent}">
+          <div class="sticker-shine"></div>
+          <div class="sticker-photo-real ${rarity.key}">
+            ${vendor.imageUrl ? `<img src="${escapeHtml(vendor.imageUrl)}" alt="${escapeHtml(vendor.name)}" />` : `<span>⚽</span>`}
+          </div>
+          <div class="sticker-team-ribbon ${accent}">${escapeHtml(teamName(vendor.team))}</div>
+        </div>
+        <div class="sticker-meta-real">
+          <span class="sticker-role">${escapeHtml(vendor.nickname || "Craque de vendas")}</span>
+          <h3>${escapeHtml(vendor.name)}</h3>
+          <p>${escapeHtml(shirt)} • ${escapeHtml(teamName(vendor.team))}</p>
+        </div>
+        <div class="sticker-mini-stats">
+          <span>Nº ${stickerNumber(index)}</span>
+          <span>${escapeHtml(rarity.label)}</span>
+        </div>
+        <div class="sticker-note">${escapeHtml(rarity.note)}</div>
+        <div class="sticker-actions">
+          <button class="btn btn-light" data-upload="${escapeHtml(vendor.id)}">Enviar foto</button>
+          <button class="btn btn-outline" data-clear-photo="${escapeHtml(vendor.id)}">Limpar</button>
+        </div>
+      </article>
+    `;
+  }).join("");
 
   document.querySelectorAll("[data-upload]").forEach((button) => {
     button.addEventListener("click", () => uploadPhoto(button.dataset.upload));
@@ -652,6 +797,7 @@ function render() {
   renderDashboard();
   renderDailySales();
   renderRounds();
+  renderAlbumShowcase();
   renderStickers();
   renderRules();
   updateTrialUI();
@@ -712,7 +858,7 @@ async function exportReportPDF(stickersOnly = false) {
   const left = 14;
   let y = 16;
 
-  function header(title) {
+  function header(title, subtitle = "Tênis One — Copa do Mundo das Vendas") {
     pdf.setFillColor(8, 100, 58);
     pdf.rect(0, 0, 210, 32, "F");
     pdf.setTextColor(255, 255, 255);
@@ -720,7 +866,7 @@ async function exportReportPDF(stickersOnly = false) {
     pdf.setFontSize(16);
     pdf.text(title, left, 13);
     pdf.setFontSize(10);
-    pdf.text("Tênis One — Copa do Mundo das Vendas", left, 22);
+    pdf.text(subtitle, left, 22);
     y = 42;
   }
 
@@ -743,33 +889,161 @@ async function exportReportPDF(stickersOnly = false) {
     y += Math.max(7, wrapped.length * 5);
   }
 
-  if (stickersOnly) {
-    header("Álbum de Figurinhas");
-    let x = left;
-    let col = 0;
-    for (const vendor of vendorsArray()) {
-      pageCheck(76);
-      pdf.setFillColor(vendor.team === "verde" ? 8 : 20, vendor.team === "verde" ? 100 : 63, vendor.team === "verde" ? 58 : 145);
-      pdf.roundedRect(x, y, 54, 68, 4, 4, "F");
-      if (vendor.imageUrl) {
-        try {
-          pdf.addImage(vendor.imageUrl, "JPEG", x + 4, y + 4, 46, 40);
-        } catch {}
+  function drawStickerCard(pdfDoc, vendor, x, top, width, height, index) {
+    const accent = teamAccent(vendor.team);
+    const rarity = getStickerRarityMap()[vendor.id] || { key: "classic", label: "Clássica", shortLabel: "Clássica" };
+    const rarityFill = rarity.key === "legendary" ? [111, 66, 193] : rarity.key === "gold" ? [183, 121, 31] : rarity.key === "silver" ? [102, 112, 133] : [8, 100, 58];
+
+    pdfDoc.setFillColor(255, 255, 255);
+    pdfDoc.setDrawColor(245, 197, 66);
+    pdfDoc.setLineWidth(1.2);
+    pdfDoc.roundedRect(x, top, width, height, 5, 5, "FD");
+
+    pdfDoc.setFillColor(248, 250, 252);
+    pdfDoc.roundedRect(x + 2, top + 2, width - 4, height - 4, 4, 4, "F");
+
+    pdfDoc.setFillColor(245, 197, 66);
+    pdfDoc.roundedRect(x + 4, top + 4, width - 8, 9, 2, 2, "F");
+    pdfDoc.setTextColor(61, 49, 0);
+    pdfDoc.setFont("helvetica", "bold");
+    pdfDoc.setFontSize(8.5);
+    pdfDoc.text("COLEÇÃO COPA DAS VENDAS 2026", x + 6, top + 10);
+    pdfDoc.setFillColor(rarityFill[0], rarityFill[1], rarityFill[2]);
+    pdfDoc.roundedRect(x + width - 31, top + 5.2, 13, 6.2, 1.5, 1.5, "F");
+    pdfDoc.setTextColor(255, 255, 255);
+    pdfDoc.setFontSize(6.8);
+    pdfDoc.text((rarity.shortLabel || rarity.label).toUpperCase(), x + width - 29, top + 9.4);
+    pdfDoc.setTextColor(61, 49, 0);
+    pdfDoc.setFontSize(8.5);
+    pdfDoc.text(`#${stickerNumber(index)}`, x + width - 16, top + 10);
+
+    pdfDoc.setDrawColor(220, 232, 223);
+    pdfDoc.setFillColor(255, 255, 255);
+    pdfDoc.roundedRect(x + 7, top + 17, width - 14, 40, 3.5, 3.5, "FD");
+
+    if (vendor.imageUrl) {
+      try {
+        pdfDoc.addImage(vendor.imageUrl, "JPEG", x + 9, top + 19, width - 18, 36);
+      } catch {
+        pdfDoc.setTextColor(8, 100, 58);
+        pdfDoc.setFontSize(20);
+        pdfDoc.text("⚽", x + width / 2 - 3.5, top + 39);
       }
-      pdf.setTextColor(255, 255, 255);
-      pdf.setFont("helvetica", "bold");
-      pdf.setFontSize(11);
-      pdf.text(vendor.name, x + 4, y + 50);
-      pdf.setFontSize(8);
-      pdf.text(pdf.splitTextToSize(`${vendor.nickname || "Craque"} • ${teamName(vendor.team)}`, 46), x + 4, y + 57);
-      col += 1;
-      x += 63;
-      if (col === 3) {
-        col = 0;
-        x = left;
-        y += 78;
-      }
+    } else {
+      pdfDoc.setTextColor(8, 100, 58);
+      pdfDoc.setFontSize(20);
+      pdfDoc.text("⚽", x + width / 2 - 3.5, top + 39);
     }
+
+    pdfDoc.setFillColor(accent.primary);
+    pdfDoc.roundedRect(x + 7, top + 59, width - 14, 8, 2.5, 2.5, "F");
+    pdfDoc.setTextColor(255, 255, 255);
+    pdfDoc.setFont("helvetica", "bold");
+    pdfDoc.setFontSize(8.5);
+    pdfDoc.text(teamName(vendor.team).toUpperCase(), x + 10, top + 64.5);
+
+    pdfDoc.setTextColor(16, 32, 24);
+    pdfDoc.setFont("helvetica", "bold");
+    pdfDoc.setFontSize(11.5);
+    pdfDoc.text(vendor.name, x + 7, top + 74);
+    pdfDoc.setTextColor(97, 115, 104);
+    pdfDoc.setFont("helvetica", "bold");
+    pdfDoc.setFontSize(8.2);
+    const nickLines = pdfDoc.splitTextToSize(vendor.nickname || "Craque de vendas", width - 14);
+    pdfDoc.text(nickLines, x + 7, top + 80);
+
+    pdfDoc.setFillColor(rarityFill[0], rarityFill[1], rarityFill[2]);
+    pdfDoc.roundedRect(x + 7, top + height - 19, width - 14, 6.5, 2.5, 2.5, "F");
+    pdfDoc.setTextColor(255, 255, 255);
+    pdfDoc.setFont("helvetica", "bold");
+    pdfDoc.setFontSize(7.8);
+    pdfDoc.text(`RARIDADE ${rarity.label.toUpperCase()}`, x + 10, top + height - 14.4);
+
+    pdfDoc.setFillColor(239, 245, 255);
+    pdfDoc.roundedRect(x + 7, top + height - 11, width - 14, 6, 2.5, 2.5, "F");
+    pdfDoc.setTextColor(accent.strong);
+    pdfDoc.setFont("helvetica", "bold");
+    pdfDoc.setFontSize(7.2);
+    pdfDoc.text(`Loja Tênis One • Nº ${stickerNumber(index)}`, x + 10, top + height - 6.8);
+  }
+
+  if (stickersOnly) {
+    const summary = getCollectionSummary();
+    header("Álbum de Figurinhas", "Coleção visual da Copa das Vendas");
+    pdf.setFillColor(255, 248, 219);
+    pdf.roundedRect(14, 46, 182, 78, 8, 8, "F");
+    pdf.setTextColor(8, 100, 58);
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(20);
+    pdf.text("ÁLBUM DA COPA DAS VENDAS", 20, 62);
+    pdf.setFontSize(12);
+    pdf.setTextColor(97, 115, 104);
+    pdf.text("Coleção demonstrativa da campanha Tênis One", 20, 72);
+    pdf.text(`Loja: ${campaign.store || "Tênis One"}`, 20, 80);
+    pdf.text(`Figurinhas prontas: ${summary.withPhotos}/${summary.total}`, 20, 88);
+    pdf.text(`Artilheiro atual: ${summary.topSeller?.name || "A definir"}`, 20, 96);
+    pdf.text(`Equipe em destaque: ${summary.leaderTeam ? teamName(summary.leaderTeam) : "Empate"}`, 20, 104);
+    pdf.setFillColor(20, 63, 145);
+    pdf.roundedRect(136, 60, 46, 46, 6, 6, "F");
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(28);
+    pdf.text("⚽", 159, 84, { align: "center" });
+    pdf.setFontSize(10);
+    pdf.text("Edição Especial", 159, 98, { align: "center" });
+
+    pdf.addPage();
+    header("Página da Coleção", "Figurinhas oficiais da campanha");
+    y = 44;
+    const cardW = 84;
+    const cardH = 103;
+    const gapX = 10;
+    const gapY = 10;
+    let x = 16;
+    let col = 0;
+    const rowHeight = cardH + gapY;
+
+    vendorsArray().forEach((vendor, index) => {
+      if (y + cardH > 282) {
+        pdf.addPage();
+        header("Página da Coleção", "Figurinhas oficiais da campanha");
+        y = 44;
+        x = 16;
+        col = 0;
+      }
+      drawStickerCard(pdf, vendor, x, y, cardW, cardH, index);
+      col += 1;
+      x += cardW + gapX;
+      if (col === 2) {
+        col = 0;
+        x = 16;
+        y += rowHeight;
+      }
+    });
+
+    pdf.addPage();
+    header("Espaços Especiais", "Destaques da campanha");
+    pdf.setFillColor(247, 250, 252);
+    pdf.roundedRect(16, 46, 178, 34, 6, 6, "F");
+    pdf.setTextColor(8, 100, 58);
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(13);
+    pdf.text("Especial Artilheiro do Mês", 24, 58);
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(11);
+    pdf.setTextColor(97, 115, 104);
+    pdf.text(summary.topSeller ? `${summary.topSeller.name} • ${brl(summary.topSeller.total)}` : "A definir", 24, 68);
+
+    pdf.setFillColor(247, 250, 252);
+    pdf.roundedRect(16, 88, 178, 34, 6, 6, "F");
+    pdf.setTextColor(20, 63, 145);
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(13);
+    pdf.text("Especial Equipe Campeã", 24, 100);
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(11);
+    pdf.setTextColor(97, 115, 104);
+    pdf.text(summary.leaderTeam ? `${teamName(summary.leaderTeam)} em destaque no momento` : "Empate no momento", 24, 110);
+
     pdf.save("album-figurinhas-tenis-one.pdf");
     return;
   }
