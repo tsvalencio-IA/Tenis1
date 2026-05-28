@@ -1049,17 +1049,38 @@ nav {
 }
 
 .sticker-side-title {
-  writing-mode: vertical-rl;
-  transform: rotate(180deg);
+  writing-mode: horizontal-tb;
+  transform: none;
   text-transform: uppercase;
-  letter-spacing: .2em;
-  font-size: 16px;
+  letter-spacing: .045em;
+  font-size: 12px;
+  line-height: 1.05;
   font-weight: 900;
   color: var(--green-dark);
+  text-align: center;
+  max-width: 64px;
+  white-space: normal;
 }
 
-.sticker-premium.azul .sticker-side-title { color: var(--blue); }
-.sticker-premium.compact .sticker-side-title { font-size: 10px; letter-spacing: .13em; }
+.sticker-premium.azul .sticker-side-title {
+  writing-mode: horizontal-tb;
+  transform: none;
+  text-transform: uppercase;
+  letter-spacing: .045em;
+  font-size: 12px;
+  line-height: 1.05;
+  font-weight: 900;
+  color: var(--green-dark);
+  text-align: center;
+  max-width: 64px;
+  white-space: normal;
+}
+.sticker-premium.compact .sticker-side-title {
+  font-size: 7.8px;
+  letter-spacing: .025em;
+  max-width: 42px;
+  line-height: 1.05;
+}
 
 .sticker-side-stripes {
   width: 34px;
@@ -1408,7 +1429,19 @@ nav {
   .sticker-shield-text strong { font-size: 13px; }
   .sticker-shield-text span { font-size: 7px; }
   .sticker-side-rail { top: 64px; left: 14px; bottom: 96px; width: 58px; padding: 12px 7px 8px; border-radius: 16px; }
-  .sticker-side-title { font-size: 11px; letter-spacing: .14em; }
+  .sticker-side-title {
+  writing-mode: horizontal-tb;
+  transform: none;
+  text-transform: uppercase;
+  letter-spacing: .045em;
+  font-size: 12px;
+  line-height: 1.05;
+  font-weight: 900;
+  color: var(--green-dark);
+  text-align: center;
+  max-width: 64px;
+  white-space: normal;
+}
   .sticker-side-stripes { width: 24px; height: 48px; margin: 8px 0; }
   .sticker-side-shirt-number { width: 32px; height: 32px; font-size: 16px; border-radius: 10px; }
   .sticker-stage { inset: 40px 10px 82px 10px; border-radius: 18px; }
@@ -1487,4 +1520,31 @@ nav {
   .daily-group-summary {
     grid-template-columns: 1fr;
   }
+}
+
+/* Ajuste de precisão visual: nenhum texto principal da figurinha fica invertido. */
+.sticker-side-title,
+.sticker-name-banner,
+.sticker-role-banner,
+.sticker-footer-brand,
+.sticker-rarity-badge {
+  text-rendering: geometricPrecision;
+}
+
+.sticker-role-banner,
+.sticker-footer-brand {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.manager-fig-help {
+  margin: 14px 0 0;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: #fff8db;
+  border: 1px solid #efd77b;
+  color: #5f4700;
+  font-size: 13.5px;
+  font-weight: 800;
 }

@@ -857,10 +857,10 @@ function renderVendorAdmin() {
           <label>Raridade
             <select data-field="rarity">${raritySelectOptions(vendor.rarity)}</select>
           </label>
-          <label>Título da figurinha
+          <label>Título/destaque da figurinha
             <select data-field="titleSelect">${titleSelectOptions(TITLE_OPTIONS.includes(vendor.title) ? vendor.title : "Personalizado")}</select>
           </label>
-          <label class="custom-title-wrap ${TITLE_OPTIONS.includes(vendor.title) ? "hidden" : ""}">Título personalizado
+          <label class="custom-title-wrap ${TITLE_OPTIONS.includes(vendor.title) ? "hidden" : ""}">Título/destaque personalizado
             <input data-field="title" value="${escapeHtml(vendor.title || "")}" />
           </label>
           <label>Subtítulo / frase curta
