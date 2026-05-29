@@ -1548,3 +1548,36 @@ nav {
   font-size: 13.5px;
   font-weight: 800;
 }
+
+
+.daily-action-bar {
+  margin-bottom: 12px;
+}
+
+.daily-final-status {
+  border: 1px solid var(--line);
+  background: #fff8db;
+  color: #6b5200;
+  font-weight: 900;
+  border-radius: 16px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  font-size: 13px;
+}
+
+.daily-final-status.closed {
+  background: #edf8f1;
+  color: var(--green-dark);
+  border-color: #cbe9d5;
+}
+
+.timeline-row.closed {
+  border-color: #cbe9d5;
+  background: linear-gradient(180deg, #ffffff, #f4fff7);
+}
+
+@media (max-width: 760px) {
+  .daily-action-bar .btn {
+    width: 100%;
+  }
+}

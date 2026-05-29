@@ -108,7 +108,7 @@
           <div class="score-center">
             <span>Placar geral</span>
             <strong>VS</strong>
-            <button id="closeTodayBtn" class="btn btn-primary manager-only">Recalcular rodada de hoje</button>
+            <button id="closeTodayBtn" class="btn btn-primary manager-only">Finalizar dia de hoje</button>
           </div>
           <div class="team-score blue">
             <span>Time Azul</span>
@@ -198,7 +198,8 @@
                 Observação
                 <input id="saleNote" placeholder="Opcional" />
               </label>
-              <button class="btn btn-primary full-span" type="submit">Salvar lançamento</button>
+              <button class="btn btn-primary full-span" type="submit">Salvar venda e recalcular automaticamente</button>
+              <button id="finalizeSelectedDayBtn" class="btn btn-blue full-span" type="button">Finalizar dia selecionado</button>
             </form>
 
             <p class="note">
@@ -213,6 +214,9 @@
                 <p class="eyebrow">Vendas do dia</p>
                 <h2 id="dailyTitle">Hoje</h2>
               </div>
+            </div>
+            <div class="daily-action-bar manager-only">
+              <button id="finalizeDailyBtn" class="btn btn-primary wide" type="button">Finalizar este dia</button>
             </div>
             <div id="dailySalesList" class="sales-list"></div>
           </article>
@@ -234,7 +238,7 @@
                 Data para conferir/recalcular
                 <input id="roundDate" type="date" />
               </label>
-              <button id="closeRoundBtn" class="btn btn-primary">Recalcular rodada automática</button>
+              <button id="closeRoundBtn" class="btn btn-primary">Finalizar / recalcular dia selecionado</button>
             </div>
 
             <div class="divider"></div>

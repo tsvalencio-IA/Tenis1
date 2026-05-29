@@ -81,3 +81,8 @@ O guia explica:
 - ranking e artilheiro;
 - auditoria operacional;
 - geração do álbum e relatórios.
+
+
+## Ajuste operacional importante
+
+Na tela **Lançar vendas**, o gerente usa **Salvar venda e recalcular automaticamente** para registrar o valor do vendedor. Ao terminar os lançamentos do dia, usa **Finalizar dia selecionado** ou **Finalizar este dia** para marcar a rodada como finalizada. O cálculo de gols e bônus continua automático.

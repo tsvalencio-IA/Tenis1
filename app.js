@@ -767,8 +767,14 @@ function renderDailySales() {
   const winnerTeam = winnerFromTotals(totals);
   const goals = winnerTeam ? getGoalsForDate(date) : 0;
   const round = state.data.rounds?.[date];
+  const finalizedText = round?.status === "finalizado"
+    ? `Dia finalizado pelo gerente em ${new Date(round.finalizedAt).toLocaleString("pt-BR")}.`
+    : "Dia ainda em conferência. O gerente pode finalizar quando terminar os lançamentos.";
 
   const groupSummary = `
+    <div class="daily-final-status ${round?.status === "finalizado" ? "closed" : ""}">
+      ${finalizedText}
+    </div>
     <div class="daily-group-summary">
       <div class="daily-group-card verde ${winnerTeam === "verde" ? "winner" : ""}">
         <span>Time Verde</span>
@@ -812,9 +818,9 @@ function renderDailySales() {
 
 function renderRounds() {
   const roundRows = roundsArray().sort((a, b) => String(b.date).localeCompare(String(a.date))).map((round) => `
-    <div class="timeline-row">
+    <div class="timeline-row ${round.status === "finalizado" ? "closed" : ""}">
       <strong>${round.date.split("-").reverse().join("/")} — ${round.winnerTeam ? teamName(round.winnerTeam) : "Empate"}</strong>
-      <span>Automático • Verde ${brl(round.teamTotals?.verde || 0)} x Azul ${brl(round.teamTotals?.azul || 0)} • ${round.goalsAwarded || 0} gol(s)</span>
+      <span>${round.status === "finalizado" ? "Finalizado pelo gerente" : "Automático em aberto"} • Verde ${brl(round.teamTotals?.verde || 0)} x Azul ${brl(round.teamTotals?.azul || 0)} • ${round.goalsAwarded || 0} gol(s)</span>
     </div>
   `).join("");
 
@@ -1146,18 +1152,24 @@ async function saveSale(event) {
 }
 
 async function closeRound(date) {
-  if (!ensureCanSave("recalcular rodada automática")) return;
-  if (!date) return toast("Escolha uma data para recalcular.");
+  if (!ensureCanSave("finalizar dia")) return;
+  if (!date) return toast("Escolha uma data para finalizar.");
   const { round, bonus } = recomputeAutomaticsForDate(date);
-  await persist();
   if (!round) return toast("Nenhuma venda encontrada para essa data.");
+  state.data.rounds[date] = {
+    ...round,
+    status: "finalizado",
+    finalizedAt: new Date().toISOString(),
+    finalizedBy: "gerente"
+  };
+  await persist();
   const roundText = round.winnerTeam
-    ? `${teamName(round.winnerTeam)} venceu a rodada e recebeu ${round.goalsAwarded} gol(s).`
-    : "Rodada empatada. Nenhum gol aplicado.";
+    ? `${teamName(round.winnerTeam)} venceu o dia e recebeu ${round.goalsAwarded} gol(s).`
+    : "Dia finalizado empatado. Nenhum gol aplicado.";
   const bonusText = bonus?.winnerTeam
     ? ` Bônus da ${round.dezena}ª dezena atualizado para ${teamName(bonus.winnerTeam)}.`
     : ` Bônus da ${round.dezena}ª dezena sem vencedor no momento.`;
-  toast(roundText + bonusText);
+  toast(`Dia ${date.split("-").reverse().join("/")} finalizado. ${roundText}${bonusText}`);
 }
 
 async function applyBonus() {
@@ -1444,6 +1456,8 @@ function bindEvents() {
   $("roundDate").value = isoToday();
   $("saleDate").addEventListener("change", renderDailySales);
   $("saleForm").addEventListener("submit", saveSale);
+  $("finalizeSelectedDayBtn")?.addEventListener("click", () => closeRound($("saleDate").value));
+  $("finalizeDailyBtn")?.addEventListener("click", () => closeRound($("saleDate").value));
   $("closeTodayBtn").addEventListener("click", () => closeRound(isoToday()));
   $("closeRoundBtn").addEventListener("click", () => closeRound($("roundDate").value));
   $("applyBonusBtn").addEventListener("click", applyBonus);
