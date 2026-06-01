@@ -1,11 +1,30 @@
 # Copa do Mundo de Vendas Diária — Tênis One
 
-Sistema demonstrativo para GitHub Pages.
+## Versão profissional com Firebase Auth, Realtime Database e Cloudinary
+
+Esta versão preserva o projeto atual da gincana e adiciona a camada profissional de login por email/senha, banco em tempo real e upload de fotos.
+
+Leia primeiro:
+
+```txt
+CONFIGURAR.md
+```
+
+É nesse arquivo que está explicado onde colocar:
+- chaves do Firebase;
+- Cloudinary `cloudName` e `uploadPreset`;
+- email do gerente;
+- emails dos 5 vendedores;
+- regras do Realtime Database.
+
+
 
 ## Acessos
 
-- Gerente / Administrador: senha `2026`
-- Vendedores / Acompanhamento: senha `vendas`
+- Versão profissional: email e senha cadastrados no Firebase Authentication.
+- Gerente: definido em `config.js` no campo `auth.managerEmail`.
+- Vendedores: definidos em `config.js` no array `auth.sellers`.
+- Fallback local preservado: se o Firebase não estiver configurado, o sistema ainda aceita gerente `2026` e vendedores `vendas`.
 
 ## Regra oficial aplicada
 

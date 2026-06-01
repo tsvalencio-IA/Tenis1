@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Copa do Mundo das Vendas — Tênis One</title>
+  <title>Copa de Vendas — Corrida das Dezenas</title>
   <link rel="stylesheet" href="styles.css" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
   <script src="config.js" defer></script>
@@ -14,15 +14,29 @@
 
   <section id="loginScreen" class="login-screen">
     <div class="login-card">
-      <div class="login-badge">⚽ Demonstração oficial</div>
-      <h1>Copa do Mundo das Vendas</h1>
+      <div class="login-badge">⚽ Copa oficial</div>
+      <h1>Copa de Vendas</h1>
       <p>
-        Sistema demonstrativo da gincana da Tênis One: placar por duplas, ranking individual,
-        rodadas por dia, bônus por dezena e álbum de figurinhas controlado pelo gerente.
+        Sistema oficial da gincana da Tênis One: corrida das dezenas com placar por equipes, ranking individual, rodadas por dia, bônus por dezena e álbum de figurinhas controlado pelo gerente.
       </p>
 
       <div class="login-grid">
+        <label id="loginEmailWrap">
+          Email de acesso
+          <input id="loginEmail" type="email" placeholder="email cadastrado no Firebase Auth" autocomplete="username" />
+        </label>
+
         <label>
+          Senha
+          <input id="loginPassword" type="password" placeholder="Senha do Firebase Auth" autocomplete="current-password" />
+        </label>
+
+        <label class="remember-access-wrap">
+          <input id="rememberAccess" type="checkbox" />
+          <span>Salvar email e senha neste aparelho</span>
+        </label>
+
+        <label id="legacyRoleWrap" class="hidden">
           Perfil de acesso
           <select id="loginRole">
             <option value="manager">Gerente / Administrador</option>
@@ -34,22 +48,20 @@
           Escolha seu nome
           <select id="sellerPicker"></select>
         </label>
-
-        <label>
-          Senha
-          <input id="loginPassword" type="password" placeholder="Digite a senha de acesso" />
-        </label>
       </div>
 
       <button id="loginBtn" class="btn btn-primary wide">Entrar no sistema</button>
 
-      <div id="trialLoginNotice" class="trial-notice"></div>
+      <div id="trialLoginNotice" class="trial-notice hidden"></div>
 
-      <div class="login-hint">
-        <strong>Acesso gerente:</strong> senha 2026<br>
-        <strong>Acesso vendedores:</strong> senha vendas
+      <div class="login-hint" id="authLoginHint">
+        <strong>Login profissional:</strong> digite o email e a senha cadastrados no Firebase Authentication.<br>
+        O gerente e os vendedores são liberados no arquivo <strong>config.js</strong>.
       </div>
-      <div class="login-hint"><a href="guia-gerente.html">Abrir guia do gerente</a></div>
+      <div class="login-hint hidden" id="legacyLoginHint">
+        <strong>Acesso local:</strong> gerente 2026 / vendedores vendas.
+      </div>
+      <div class="login-powered">Powered by thIAguinho Soluções Digitais</div>
     </div>
   </section>
 
@@ -58,8 +70,8 @@
       <div class="brand">
         <div class="brand-icon">🏆</div>
         <div>
-          <strong>Copa das Vendas</strong>
-          <span>Tênis One</span>
+          <strong>Copa de Vendas</strong>
+          <span>Corrida das Dezenas</span>
         </div>
       </div>
 
@@ -80,8 +92,8 @@
       </nav>
 
       <div class="side-footer">
-        <div id="trialStatus" class="trial-status"></div>
-        <a class="btn btn-light wide" href="guia-gerente.html">Guia do gerente</a><button id="logoutBtn" class="btn btn-outline wide">Sair</button>
+        <div id="trialStatus" class="trial-status hidden"></div>
+        <button id="logoutBtn" class="btn btn-outline wide">Sair</button>
       </div>
     </aside>
 
@@ -89,47 +101,74 @@
       <header class="topbar">
         <div>
           <p class="eyebrow">Tênis One — Shopping Cidade Norte</p>
-          <h1 id="pageTitle">Placar da Gincana</h1>
+          <h1 id="pageTitle">Corrida das Dezenas</h1>
         </div>
         <div class="top-actions manager-only">
-          <button id="seedBtn" class="btn btn-light">Recriar dados demo</button>
           <button id="downloadReportBtn" class="btn btn-blue">Relatório PDF</button>
         </div>
       </header>
 
       <section id="dashboard" class="view active">
-        <div class="hero-score">
-          <div class="team-score green">
-            <span>Time Verde</span>
-            <strong id="greenGoals">0</strong>
-            <small>gols</small>
-            <p id="greenSales">R$ 0,00</p>
-          </div>
-          <div class="score-center">
-            <span>Placar geral</span>
-            <strong>VS</strong>
-            <button id="closeTodayBtn" class="btn btn-primary manager-only">Finalizar dia de hoje</button>
-          </div>
-          <div class="team-score blue">
-            <span>Time Azul</span>
-            <strong id="blueGoals">0</strong>
-            <small>gols</small>
-            <p id="blueSales">R$ 0,00</p>
-          </div>
-        </div>
+        <article class="race-board-wrap">
+          <div class="race-board-header">🏆 Copa de Vendas: Corrida das Dezenas 🏆</div>
 
-        <div class="grid-3">
-          <article class="stat-card">
+          <div class="race-board-grid">
+            <section class="race-team-panel green">
+              <div class="race-team-title">[BRASIL]</div>
+              <div id="boardGreenRoster" class="race-team-roster"></div>
+            </section>
+
+            <section class="race-team-panel blue">
+              <div class="race-team-title">[FRANÇA]</div>
+              <div id="boardBlueRoster" class="race-team-roster"></div>
+            </section>
+
+            <section class="race-dezena-panel">
+              <div class="race-dezena-title">1ª Dezena <small>(dias 01-10)</small></div>
+              <div id="boardDezena1" class="race-days-list"></div>
+            </section>
+
+            <section class="race-dezena-panel">
+              <div class="race-dezena-title">2ª Dezena <small>(dias 11-20)</small></div>
+              <div id="boardDezena2" class="race-days-list"></div>
+            </section>
+
+            <section class="race-dezena-panel">
+              <div class="race-dezena-title">3ª Dezena: o mata-mata <small>(dias 21-fim)</small></div>
+              <div id="boardDezena3" class="race-days-list"></div>
+            </section>
+          </div>
+
+          <div class="race-board-bottom">
+            <div class="race-goals-panel green">
+              <span>Total de gols</span>
+              <strong id="greenGoalsBoard">0</strong>
+            </div>
+
+            <div class="race-goals-panel blue">
+              <span>Total de gols</span>
+              <strong id="blueGoalsBoard">0</strong>
+            </div>
+
+            <div class="race-artilharia-panel">
+              <div class="race-artilharia-title">⭐ Corrida pela artilharia <small>(maior faturamento individual)</small></div>
+              <div id="boardTopRanking" class="race-top-ranking"></div>
+            </div>
+          </div>
+        </article>
+
+        <div class="grid-3 board-summary-grid">
+          <article class="stat-card accent-yellow">
             <span>Rodada atual vale</span>
             <strong id="todayGoals">0 gol(s)</strong>
             <p id="todayDezena">Conforme a dezena do mês</p>
           </article>
-          <article class="stat-card">
+          <article class="stat-card accent-green">
             <span>Artilheiro individual</span>
             <strong id="topSellerName">A definir</strong>
             <p id="topSellerAmount">R$ 0,00</p>
           </article>
-          <article class="stat-card">
+          <article class="stat-card accent-blue">
             <span>Líder atual</span>
             <strong id="leaderTeam">Empate</strong>
             <p>Critério: gols, depois faturamento</p>
@@ -137,7 +176,7 @@
         </div>
 
         <div class="grid-2">
-          <article class="card">
+          <article class="card card-themed">
             <div class="card-head">
               <div>
                 <p class="eyebrow">Ranking individual</p>
@@ -147,7 +186,7 @@
             <div id="sellerRanking" class="ranking-list"></div>
           </article>
 
-          <article class="card">
+          <article class="card card-themed">
             <div class="card-head">
               <div>
                 <p class="eyebrow">Times</p>
@@ -247,7 +286,7 @@
             <p class="muted">
               O bônus não precisa ser lançado manualmente. Quando o gerente salva ou corrige uma venda,
               o sistema recalcula a rodada do dia e atualiza automaticamente o bônus da dezena.
-              Nesta versão, “maior meta batida” é tratado como maior faturamento acumulado da dezena.
+              A regra “maior meta batida” é tratada como maior faturamento acumulado da dezena.
             </p>
 
             <div class="form-grid">
@@ -363,6 +402,7 @@
         </article>
       </section>
     </section>
+      <footer class="powered-footer">Powered by thIAguinho Soluções Digitais</footer>
   </main>
 </body>
 </html>

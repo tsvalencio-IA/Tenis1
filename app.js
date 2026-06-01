@@ -5,6 +5,7 @@ const TRIAL_DAYS = Number(CONFIG.trialDays || 3);
 const CONTACT_TEXT = `${CONFIG.contactChannel || "WhatsApp"} do ${CONFIG.contactPerson || "Thiago Ventura Valêncio"}`;
 const TRIAL_KEY = "tenis_one_copa_trial_started_at_vFinal";
 const LOCAL_STATE_KEY = "tenis_one_copa_state_vFinal";
+const LOGIN_MEMORY_KEY = "tenis_one_copa_login_remember_v1";
 
 const RARITIES = {
   legendary: { key: "legendary", label: "Lendária", shortLabel: "Holo", note: "Destaque máximo da coleção" },
@@ -36,8 +37,19 @@ const SPECIAL_OPTIONS = [
 ];
 
 let services = {};
-let session = { role: null, vendorId: null };
-const state = { mode: "local", db: null, data: createSeedData() };
+let session = { role: null, vendorId: null, email: null };
+const state = { mode: "local", db: null, auth: null, data: createSeedData() };
+let realtimeStarted = false;
+let realtimeUnsubscribe = null;
+
+const AUTH_CONFIG = CONFIG.auth || {};
+const AUTH_ENABLED = AUTH_CONFIG.enabled !== false;
+const managerEmailNormalized = String(AUTH_CONFIG.managerEmail || "").trim().toLowerCase();
+const sellerEmailMap = new Map(
+  (AUTH_CONFIG.sellers || [])
+    .filter((item) => item && item.email && item.vendorId)
+    .map((item) => [String(item.email).trim().toLowerCase(), String(item.vendorId).trim()])
+);
 
 const $ = (id) => document.getElementById(id);
 const brl = (value) => Number(value || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -58,7 +70,7 @@ function isoToday() {
 }
 
 function teamName(teamId) {
-  return TEAMS?.[teamId]?.name || (teamId === "azul" ? "Time Azul" : "Time Verde");
+  return TEAMS?.[teamId]?.name || (teamId === "azul" ? "França" : "Brasil");
 }
 
 function teamAccent(teamId) {
@@ -68,46 +80,31 @@ function teamAccent(teamId) {
 }
 
 function getTrialInfo() {
-  let startRaw = localStorage.getItem(TRIAL_KEY);
-  if (!startRaw) {
-    startRaw = new Date().toISOString();
-    localStorage.setItem(TRIAL_KEY, startRaw);
-  }
-  let startDate = new Date(startRaw);
-  if (Number.isNaN(startDate.getTime())) {
-    startDate = new Date();
-    localStorage.setItem(TRIAL_KEY, startDate.toISOString());
-  }
-  const expiresAt = new Date(startDate.getTime() + TRIAL_DAYS * 24 * 60 * 60 * 1000);
-  const remainingMs = expiresAt.getTime() - Date.now();
   return {
-    startDate,
-    expiresAt,
-    expired: remainingMs <= 0,
-    daysLeft: Math.max(0, Math.ceil(remainingMs / (24 * 60 * 60 * 1000)))
+    startDate: null,
+    expiresAt: null,
+    expired: false,
+    daysLeft: null,
+    production: true
   };
 }
 
 function updateTrialUI() {
-  const info = getTrialInfo();
-  const validText = `Teste gratuito: ${info.daysLeft} dia(s) restante(s). Depois disso, novos dados não serão salvos. Sugestões e alterações: ${CONTACT_TEXT}.`;
-  const expiredText = `Teste gratuito encerrado. Novos dados não serão salvos. Envie sugestões e alterações para o ${CONTACT_TEXT}.`;
   ["trialLoginNotice", "trialStatus"].forEach((id) => {
     const el = $(id);
     if (!el) return;
-    el.textContent = info.expired ? expiredText : validText;
-    el.classList.toggle("expired", info.expired);
+    el.textContent = "";
+    el.classList.add("hidden");
+    el.classList.remove("expired");
   });
   document.querySelectorAll(".manager-action, #saleForm button, #closeTodayBtn, #closeRoundBtn, #applyBonusBtn, #seedBtn, #addVendorBtn, [data-save-vendor], [data-upload], [data-delete-vendor], [data-reset-vendor]")
-    .forEach((el) => el.classList.toggle("trial-lock", info.expired));
-  return info;
+    .forEach((el) => el.classList.remove("trial-lock"));
+  return getTrialInfo();
 }
 
 function ensureCanSave(action = "salvar novos dados") {
-  const info = updateTrialUI();
-  if (!info.expired) return true;
-  toast(`Teste gratuito encerrado. Não é possível ${action}. Envie sugestões e alterações para o ${CONTACT_TEXT}.`);
-  return false;
+  updateTrialUI();
+  return true;
 }
 
 function toast(message) {
@@ -136,7 +133,12 @@ function createSeedData() {
       customSpecialLabel: vendor.customSpecialLabel || "",
       showInAlbum: vendor.showInAlbum !== false,
       active: vendor.active !== false,
-      imageUrl: vendor.imageUrl || ""
+      imageUrl: vendor.imageUrl || "",
+      position: vendor.position || vendor.role || "Vendedor",
+      height: vendor.height || "1,70m",
+      weight: vendor.weight || "70kg",
+      birthDate: vendor.birthDate || vendor.nascimento || "",
+      age: vendor.age || "18"
     };
   });
   return {
@@ -198,6 +200,11 @@ function normalizeData(data) {
     v.showInAlbum = v.showInAlbum !== false;
     v.active = v.active !== false;
     v.imageUrl = v.imageUrl || "";
+    v.position = v.position || v.role || "Vendedor";
+    v.height = v.height || "1,70m";
+    v.weight = v.weight || "70kg";
+    v.birthDate = v.birthDate || v.nascimento || "";
+    v.age = v.age || "18";
   });
   return merged;
 }
@@ -220,44 +227,184 @@ async function loadSyncServices() {
     onValue: databaseModule.onValue,
     get: databaseModule.get,
     getAuth: authModule.getAuth,
-    signInAnonymously: authModule.signInAnonymously
+    signInWithEmailAndPassword: authModule.signInWithEmailAndPassword,
+    onAuthStateChanged: authModule.onAuthStateChanged,
+    signOut: authModule.signOut
   };
+}
+
+function firebaseReady() {
+  return isConfigured(CONFIG.firebase, ["apiKey", "databaseURL", "appId"]);
+}
+
+function useFirebaseAuth() {
+  return AUTH_ENABLED && firebaseReady();
+}
+
+function getSessionFromEmail(email) {
+  const normalized = String(email || "").trim().toLowerCase();
+
+  if (normalized && managerEmailNormalized && normalized === managerEmailNormalized) {
+    return {
+      role: "manager",
+      vendorId: null,
+      email: normalized
+    };
+  }
+
+  if (sellerEmailMap.has(normalized)) {
+    return {
+      role: "seller",
+      vendorId: sellerEmailMap.get(normalized),
+      email: normalized
+    };
+  }
+
+  return null;
+}
+
+function shouldUseEmailLogin() {
+  return AUTH_ENABLED;
+}
+
+function loadRememberedLogin() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(LOGIN_MEMORY_KEY) || "null");
+    if (!saved) return;
+    if ($("loginEmail") && saved.email) $("loginEmail").value = saved.email;
+    if ($("loginPassword") && saved.password) $("loginPassword").value = saved.password;
+    if ($("rememberAccess")) $("rememberAccess").checked = true;
+  } catch {
+    localStorage.removeItem(LOGIN_MEMORY_KEY);
+  }
+}
+
+function saveRememberedLogin() {
+  if (!$("rememberAccess")) return;
+  if ($("rememberAccess").checked) {
+    localStorage.setItem(LOGIN_MEMORY_KEY, JSON.stringify({
+      email: $("loginEmail")?.value.trim() || "",
+      password: $("loginPassword")?.value || ""
+    }));
+  } else {
+    localStorage.removeItem(LOGIN_MEMORY_KEY);
+  }
+}
+
+function configureLoginMode() {
+  const emailLogin = shouldUseEmailLogin();
+  const professionalReady = useFirebaseAuth();
+
+  $("loginEmailWrap")?.classList.toggle("hidden", !emailLogin);
+  $("authLoginHint")?.classList.toggle("hidden", !emailLogin);
+  $("legacyLoginHint")?.classList.toggle("hidden", emailLogin);
+  $("legacyRoleWrap")?.classList.toggle("hidden", emailLogin);
+  $("sellerPickerWrap")?.classList.toggle("hidden", emailLogin || $("loginRole")?.value !== "seller");
+  $("rememberAccess")?.closest("label")?.classList.toggle("hidden", !emailLogin);
+
+  if (emailLogin) {
+    $("loginPassword").placeholder = professionalReady
+      ? "Senha cadastrada no Firebase Auth"
+      : "Senha do Firebase Auth";
+  } else {
+    $("loginPassword").placeholder = "Digite a senha de acesso";
+  }
+}
+
+async function startRealtimeSync() {
+  if (!state.db || realtimeStarted) return;
+  realtimeStarted = true;
+
+  const root = services.ref(state.db, "copaTenisOne");
+
+  try {
+    const snap = await services.get(root);
+    if (!snap.exists() && session.role === "manager") {
+      await services.set(root, state.data);
+    }
+  } catch (err) {
+    console.warn("Não foi possível verificar dados iniciais no Firebase.", err);
+  }
+
+  realtimeUnsubscribe = services.onValue(root, (snapshot) => {
+    if (snapshot.exists()) {
+      state.data = normalizeData(snapshot.val() || createSeedData());
+      renderVendorSelects();
+      render();
+    } else if (session.role === "manager") {
+      state.data = normalizeData(state.data || createSeedData());
+      renderVendorSelects();
+      render();
+    } else {
+      toast("Banco ainda não inicializado. Entre primeiro com o gerente para criar a base.");
+    }
+  });
+}
+
+async function enterAppWithSession(nextSession) {
+  session = nextSession;
+  $("loginScreen").classList.add("hidden");
+  $("appShell").classList.remove("hidden");
+  setView("dashboard");
+  renderVendorSelects();
+  render();
+
+  if (state.mode === "firebase" && state.db) {
+    await startRealtimeSync();
+  }
 }
 
 async function initStorage() {
   localLoad();
-  const firebaseReady = isConfigured(CONFIG.firebase, ["apiKey", "databaseURL", "appId"]);
-  if (!firebaseReady) return;
+  configureLoginMode();
+
+  const ready = firebaseReady();
+  if (!ready) {
+    state.mode = "local";
+    return;
+  }
 
   try {
     await loadSyncServices();
     const app = services.initializeApp(CONFIG.firebase);
-    const auth = services.getAuth(app);
-    await services.signInAnonymously(auth);
+    state.auth = services.getAuth(app);
     state.db = services.getDatabase(app);
     state.mode = "firebase";
 
-    const root = services.ref(state.db, "copaTenisOne");
-    const snap = await services.get(root);
-    if (!snap.exists()) await services.set(root, state.data);
+    services.onAuthStateChanged(state.auth, async (user) => {
+      if (!user) return;
 
-    services.onValue(root, (snapshot) => {
-      state.data = normalizeData(snapshot.val() || createSeedData());
-      render();
+      const nextSession = getSessionFromEmail(user.email);
+      if (!nextSession) {
+        toast("Email sem permissão no config.js. Verifique managerEmail e sellers.");
+        await services.signOut(state.auth);
+        return;
+      }
+
+      await enterAppWithSession(nextSession);
     });
   } catch (err) {
     console.warn(err);
     state.mode = "local";
+    configureLoginMode();
   }
 }
 
 async function persist(renderAfter = true) {
   if (!ensureCanSave("salvar alterações")) return false;
-  if (state.mode === "firebase" && state.db) {
-    await services.set(services.ref(state.db, "copaTenisOne"), state.data);
-  } else {
-    localSave();
+
+  try {
+    if (state.mode === "firebase" && state.db && session.role === "manager") {
+      await services.set(services.ref(state.db, "copaTenisOne"), state.data);
+    } else {
+      localSave();
+    }
+  } catch (err) {
+    console.error(err);
+    toast("Não foi possível salvar no Firebase. Verifique as regras do banco e o email do gerente.");
+    return false;
   }
+
   if (renderAfter) render();
   updateTrialUI();
   return true;
@@ -503,57 +650,103 @@ function teamSelectOptions(current) {
   return Object.values(TEAMS).map((team) => `<option value="${team.id}" ${team.id === current ? "selected" : ""}>${team.name}</option>`).join("");
 }
 
-function buildStickerCard(vendor, index, options = {}) {
-  const rarity = RARITIES[vendor.rarity] || RARITIES.classic;
-  const team = vendor.team === "azul" ? "azul" : "verde";
+
+function getStickerIndex(vendor) {
+  const vendorId = String(vendor?.id || "");
+  const albumVendors = vendorsArray({ albumOnly: true });
+  let index = albumVendors.findIndex((item) => String(item.id) === vendorId);
+  if (index < 0) {
+    index = vendorsArray({ activeOnly: false }).findIndex((item) => String(item.id) === vendorId);
+  }
+  return Math.max(0, index);
+}
+
+function getStickerMeta(vendor) {
+  const team = vendor?.team === "azul" ? "azul" : "verde";
+  const rarity = RARITIES[vendor?.rarity] || RARITIES.classic;
   const teamLabel = teamName(team);
-  const number = getVendorNumber(vendor, index);
-  const compact = !!options.compact;
-  const showManagerActions = !!options.showManagerActions && session.role === "manager";
-  const photo = vendor.imageUrl
-    ? `<img src="${escapeHtml(vendor.imageUrl)}" alt="${escapeHtml(vendor.name)}" />`
-    : `<div class="sticker-premium-placeholder">⚽</div>`;
-  const displayName = (vendor.shortName || vendor.name || "Vendedor").slice(0, 14);
-  const special = getSpecialLabel(vendor);
+  const stickerNumber = getStickerNumber(getStickerIndex(vendor));
+  const birthDate = String(vendor?.birthDate || vendor?.nascimento || "").trim();
+  const age = String(vendor?.age || "").trim();
+  const birthLabel = birthDate && birthDate !== "A definir" ? "NASC." : "IDADE";
+  const birthValue = birthDate && birthDate !== "A definir" ? birthDate : (age || "18");
+
+  return {
+    team,
+    teamLabel,
+    rarity,
+    stickerNumber,
+    displayName: String(vendor?.shortName || vendor?.name || "Vendedor").trim(),
+    fullName: String(vendor?.name || "Vendedor").trim(),
+    position: String(vendor?.position || vendor?.role || "Vendedor").trim(),
+    height: String(vendor?.height || "1,70m").trim(),
+    weight: String(vendor?.weight || "70kg").trim(),
+    birthLabel,
+    birthValue
+  };
+}
+
+function renderSticker(vendor, mode = "full") {
+  const normalizedMode = ["full", "mini", "export"].includes(mode) ? mode : "full";
+  const meta = getStickerMeta(vendor);
+  const initials = meta.displayName.slice(0, 2).toUpperCase() || "CV";
+  const photo = vendor?.imageUrl
+    ? `<img src="${escapeHtml(vendor.imageUrl)}" crossorigin="anonymous" loading="eager" referrerpolicy="no-referrer" alt="${escapeHtml(meta.fullName)}" />`
+    : `<div class="official-sticker-placeholder">${escapeHtml(initials)}</div>`;
 
   return `
-    <article class="sticker-premium ${team} rarity-${rarity.key} ${compact ? "compact" : ""}" data-sticker-vendor="${escapeHtml(vendor.id)}">
-      <div class="sticker-premium-frame">
-        <div class="sticker-premium-header">
-          <span>★</span>
-          <strong>COPA DAS VENDAS</strong>
-          <span>★</span>
-        </div>
-        <div class="sticker-rarity-badge ${rarity.key}">${escapeHtml(rarity.label)}</div>
-        <div class="sticker-shield-badge">
-          <div class="sticker-shield-icon">🏆</div>
-          <div class="sticker-shield-text"><small>Copa</small><strong>Vendas</strong><span>2026</span></div>
-        </div>
-        <div class="sticker-side-rail ${team}">
-          <div class="sticker-side-title">${escapeHtml(teamLabel)}</div>
-          <div class="sticker-side-stripes"></div>
-          <div class="sticker-side-shirt-number">${number}</div>
-        </div>
-        <div class="sticker-stage ${team}">
-          <div class="sticker-stage-number">${number}</div>
-          <div class="sticker-stage-accent"></div>
-          <div class="sticker-premium-photo">${photo}</div>
-        </div>
-        ${special ? `<div class="sticker-special-ribbon">${escapeHtml(special)}</div>` : ""}
-        <div class="sticker-name-banner ${team}">${escapeHtml(displayName)}</div>
-        <div class="sticker-role-banner">${escapeHtml(vendor.title || "Craque de vendas")}</div>
-        <div class="sticker-footer-brand">${escapeHtml(vendor.subtitle || "Tênis One | Copa das Vendas")}</div>
-      </div>
+    <article class="official-sticker official-sticker--${normalizedMode} official-sticker--${meta.team} rarity-${meta.rarity.key}" data-sticker-vendor="${escapeHtml(vendor?.id || "")}" data-sticker-mode="${normalizedMode}">
+      <div class="official-sticker-frame">
+        <div class="official-sticker-field"></div>
+        <div class="official-sticker-lines"></div>
 
-      <div class="sticker-caption-block">
-        <div class="sticker-caption-top">
-          <span class="sticker-caption-chip ${rarity.key}">${escapeHtml(rarity.shortLabel)}</span>
-          <span class="sticker-caption-number">#${getStickerNumber(index)}</span>
+        <div class="official-sticker-badge">
+          <span>COPA DAS</span>
+          <strong>VENDAS</strong>
+          <small>2026</small>
         </div>
-        <p class="sticker-caption-note">${escapeHtml(rarity.note)} • ${escapeHtml(teamLabel)}</p>
+
+        <div class="official-sticker-flag official-sticker-flag--${meta.team}" aria-label="${escapeHtml(meta.teamLabel)}">
+          <span></span>
+        </div>
+
+        <div class="official-sticker-stats">
+          <div><small>${escapeHtml(meta.birthLabel)}</small><strong>${escapeHtml(meta.birthValue)}</strong></div>
+          <div><small>ALTURA</small><strong>${escapeHtml(meta.height)}</strong></div>
+          <div><small>PESO</small><strong>${escapeHtml(meta.weight)}</strong></div>
+        </div>
+
+        <div class="official-sticker-photo">
+          ${photo}
+        </div>
+
+        <div class="official-sticker-footer">
+          <strong>${escapeHtml(meta.displayName.toUpperCase())}</strong>
+          <span>${escapeHtml(meta.position.toUpperCase())}</span>
+          <small>#${meta.stickerNumber} - ${escapeHtml(meta.teamLabel.toUpperCase())}</small>
+        </div>
+      </div>
+    </article>
+  `;
+}
+
+function buildStickerCard(vendor, _index, options = {}) {
+  const meta = getStickerMeta(vendor);
+  const showManagerActions = !!options.showManagerActions && session.role === "manager";
+
+  return `
+    <article class="official-sticker-shell" data-sticker-card="${escapeHtml(vendor.id)}">
+      ${renderSticker(vendor, "full")}
+      <div class="official-sticker-caption">
+        <div class="official-sticker-caption-top">
+          <span class="official-sticker-caption-chip ${meta.rarity.key}">${escapeHtml(meta.rarity.label)}</span>
+          <span class="official-sticker-caption-number">#${meta.stickerNumber}</span>
+        </div>
+        <p>${escapeHtml(meta.fullName)} - ${escapeHtml(meta.position)} - ${escapeHtml(meta.teamLabel)} - ${escapeHtml(meta.height)} - ${escapeHtml(meta.weight)} - ${escapeHtml(meta.birthLabel)}: ${escapeHtml(meta.birthValue)}</p>
         ${showManagerActions ? `
-          <div class="sticker-card-actions">
+          <div class="official-sticker-actions">
             <button class="btn btn-light" data-upload="${escapeHtml(vendor.id)}">Enviar foto</button>
+            <button class="btn btn-primary" data-camera="${escapeHtml(vendor.id)}">Bater foto</button>
             <button class="btn btn-outline" data-clear-photo="${escapeHtml(vendor.id)}">Limpar foto</button>
             <button class="btn btn-blue full-download" data-download-sticker="${escapeHtml(vendor.id)}">Baixar PNG</button>
           </div>
@@ -565,72 +758,37 @@ function buildStickerCard(vendor, index, options = {}) {
 
 function buildAlbumSpread() {
   const vendors = vendorsArray({ albumOnly: true });
-  const greens = vendors.filter((vendor) => vendor.team === "verde");
-  const blues = vendors.filter((vendor) => vendor.team === "azul");
   const summary = getCollectionSummary();
   const leaderText = summary.leaderTeam ? teamName(summary.leaderTeam) : "Empate no momento";
   const topSeller = summary.topSeller;
-
-  const greenCards = greens.map((vendor, idx) => buildStickerCard(vendor, vendors.findIndex((v) => v.id === vendor.id), { compact: true })).join("");
-  const blueCards = blues.map((vendor, idx) => buildStickerCard(vendor, vendors.findIndex((v) => v.id === vendor.id), { compact: true })).join("");
+  const albumCards = vendors.map((vendor) => `
+    <div class="official-album-slot">
+      ${renderSticker(vendor, "full")}
+    </div>
+  `).join("");
 
   return `
-    <div class="album-spread-book">
-      <section class="album-page page-left">
+    <div class="album-spread-book official-album-book">
+      <section class="album-page official-album-page">
         <div class="album-page-top">
-          <div class="album-logo-badge">🏆</div>
+          <div class="album-logo-badge">CV</div>
           <div>
-            <p class="album-mini-label">Álbum da</p>
+            <p class="album-mini-label">Album oficial</p>
             <h3>Copa das Vendas</h3>
-            <p class="album-description">Coleção da campanha. O gerente controla fotos, títulos, raridades, ordem e destaques publicados.</p>
+            <p class="album-description">Colecao completa da campanha interna com os 5 vendedores ativos.</p>
           </div>
         </div>
-
-        <div class="album-team-title verde">Time Verde</div>
-        <div class="album-card-row">${greenCards || "<p class='muted'>Nenhuma figurinha verde publicada.</p>"}</div>
-
-        <div class="album-reserve-title">Reservas</div>
-        <div class="album-empty-row">
-          ${buildEmptyAlbumSlot(5, "verde")}
-          ${buildEmptyAlbumSlot(6, "verde")}
-          ${buildEmptyAlbumSlot(7, "verde")}
-        </div>
-
+        <div class="official-album-grid">${albumCards || "<p class='muted'>Nenhuma figurinha publicada.</p>"}</div>
         <div class="album-special-strip green">
           <div class="album-special-copy">
-            <span>Especial Artilheiro</span>
+            <span>Artilheiro da campanha</span>
             <strong>${escapeHtml(topSeller?.shortName || topSeller?.name || "A definir")}</strong>
-            <small>Vendedor com maior venda acumulada no mês.</small>
+            <small>Maior faturamento individual acumulado.</small>
           </div>
-          <div class="album-special-icon">⚽</div>
-          <div class="album-special-slot">01</div>
+          <div class="album-special-icon">#1</div>
+          <div class="album-special-slot">${vendors.length}</div>
         </div>
-      </section>
-
-      <section class="album-page page-right">
-        <div class="album-page-header-inline">
-          <span>Fase de grupos</span>
-          <strong>Time Azul</strong>
-        </div>
-
-        <div class="album-card-row">${blueCards || "<p class='muted'>Nenhuma figurinha azul publicada.</p>"}</div>
-
-        <div class="album-reserve-title">Reservas</div>
-        <div class="album-empty-row">
-          ${buildEmptyAlbumSlot(5, "azul")}
-          ${buildEmptyAlbumSlot(6, "azul")}
-          ${buildEmptyAlbumSlot(7, "azul")}
-        </div>
-
-        <div class="album-special-strip blue">
-          <div class="album-special-copy">
-            <span>Especial Campeão</span>
-            <strong>${escapeHtml(leaderText)}</strong>
-            <small>Equipe com melhor desempenho no placar geral.</small>
-          </div>
-          <div class="album-special-icon">🏆</div>
-          <div class="album-special-slot">01</div>
-        </div>
+        <div class="album-foot-note">Lider atual: ${escapeHtml(leaderText)}. Todas as paginas usam o mesmo componente oficial de figurinha.</div>
       </section>
     </div>
   `;
@@ -655,7 +813,7 @@ function setView(viewId) {
   if (btn) btn.classList.add("active");
 
   const titles = {
-    dashboard: "Placar da Gincana",
+    dashboard: "Corrida das Dezenas",
     sellerPanel: "Meu desempenho",
     sales: "Lançar vendas",
     rounds: "Rodadas e bônus",
@@ -675,7 +833,7 @@ function applyRoleUI() {
   document.querySelectorAll(".seller-only").forEach((el) => el.classList.toggle("hidden", isManager));
 
   $("activeProfileLabel").textContent = isManager ? "Gerente / Administrador" : "Vendedor / Acompanhamento";
-  $("activeUserLabel").textContent = isManager ? "Saulo" : (getVendor(session.vendorId)?.name || "Vendedor");
+  $("activeUserLabel").textContent = isManager ? (AUTH_CONFIG.managerName || "Saulo") : (getVendor(session.vendorId)?.name || "Vendedor");
 }
 
 function renderVendorSelects() {
@@ -687,24 +845,110 @@ function renderVendorSelects() {
   });
 }
 
+function buildBoardVendorSlot(vendor, slotNumber) {
+  if (!vendor) {
+    return `
+      <div class="race-vendor-slot empty">
+        <div class="race-vendor-name">A definir</div>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="race-vendor-slot ${escapeHtml(vendor.team)}">
+      ${renderSticker(vendor, "mini")}
+    </div>
+  `;
+}
+
+function buildBoardRoster(teamId) {
+  const vendors = vendorsArray({ activeOnly: true }).filter((vendor) => vendor.team === teamId);
+
+  if (!vendors.length) {
+    return `
+      <div class="race-roster-grid">
+        ${buildBoardVendorSlot(null, 1)}
+      </div>
+    `;
+  }
+
+  return `
+    <div class="race-roster-grid dynamic-roster count-${vendors.length}">
+      ${vendors.map((vendor, index) => buildBoardVendorSlot(vendor, index + 1)).join("")}
+    </div>
+  `;
+}
+
+function buildBoardMarker(teamId, active, extraClass = '') {
+  return `<span class="race-marker ${escapeHtml(teamId)} ${active ? 'active' : ''} ${extraClass}"></span>`;
+}
+
+function buildBoardDezena(dezena) {
+  const [startDate, endDate] = dateRangeForDezena(dezena);
+  const startDay = Number(String(startDate).slice(-2));
+  const endDay = Number(String(endDate).slice(-2));
+  const rows = [];
+
+  for (let day = startDay; day <= endDay; day += 1) {
+    const isoDate = `${String(startDate).slice(0, 8)}${String(day).padStart(2, '0')}`;
+    const round = state.data.rounds?.[isoDate];
+    rows.push(`
+      <div class="race-day-row ${round?.winnerTeam ? 'has-winner' : ''}">
+        <strong>Dia ${String(day).padStart(2, '0')}</strong>
+        <div class="race-day-markers">
+          ${buildBoardMarker('verde', round?.winnerTeam === 'verde')}
+          ${buildBoardMarker('azul', round?.winnerTeam === 'azul')}
+        </div>
+      </div>
+    `);
+  }
+
+  const bonus = state.data.bonuses?.[`dezena_${dezena}`];
+  rows.push(`
+    <div class="race-day-row finish-row ${bonus?.winnerTeam ? 'has-winner' : ''}">
+      <strong>Fim da Dezena</strong>
+      <div class="race-day-markers">
+        ${buildBoardMarker('verde', bonus?.winnerTeam === 'verde', 'bonus')}
+        ${buildBoardMarker('azul', bonus?.winnerTeam === 'azul', 'bonus')}
+      </div>
+    </div>
+  `);
+
+  return rows.join('');
+}
+
 function renderDashboard() {
   const score = calculateScore();
   const ranking = calculateSellerRanking();
   const leader = getLeaderTeam();
   const today = isoToday();
 
-  $("greenGoals").textContent = score.verde.goals;
-  $("blueGoals").textContent = score.azul.goals;
-  $("greenSales").textContent = brl(score.verde.sales);
-  $("blueSales").textContent = brl(score.azul.sales);
-  $("todayGoals").textContent = `${getGoalsForDate(today)} gol(s)`;
-  $("todayDezena").textContent = `${getDezena(today)}ª dezena da campanha`;
-  $("topSellerName").textContent = ranking[0]?.name || "A definir";
-  $("topSellerAmount").textContent = ranking[0] ? brl(ranking[0].total) : brl(0);
-  $("leaderTeam").textContent = leader ? teamName(leader) : "Empate";
+  if ($('greenGoalsBoard')) $('greenGoalsBoard').textContent = score.verde.goals;
+  if ($('blueGoalsBoard')) $('blueGoalsBoard').textContent = score.azul.goals;
+  if ($('todayGoals')) $('todayGoals').textContent = `${getGoalsForDate(today)} gol(s)`;
+  if ($('todayDezena')) $('todayDezena').textContent = `${getDezena(today)}ª dezena da campanha`;
+  if ($('topSellerName')) $('topSellerName').textContent = ranking[0]?.name || 'A definir';
+  if ($('topSellerAmount')) $('topSellerAmount').textContent = ranking[0] ? brl(ranking[0].total) : brl(0);
+  if ($('leaderTeam')) $('leaderTeam').textContent = leader ? teamName(leader) : 'Empate';
 
-  $("sellerRanking").innerHTML = ranking.map((row, idx) => `
-    <div class="ranking-row ${idx === 0 ? "first" : ""}">
+  if ($('boardGreenRoster')) $('boardGreenRoster').innerHTML = buildBoardRoster('verde');
+  if ($('boardBlueRoster')) $('boardBlueRoster').innerHTML = buildBoardRoster('azul');
+  if ($('boardDezena1')) $('boardDezena1').innerHTML = buildBoardDezena(1);
+  if ($('boardDezena2')) $('boardDezena2').innerHTML = buildBoardDezena(2);
+  if ($('boardDezena3')) $('boardDezena3').innerHTML = buildBoardDezena(3);
+
+  if ($('boardTopRanking')) {
+    $('boardTopRanking').innerHTML = ranking.slice(0, 4).map((row, idx) => `
+      <div class="race-ranking-row place-${idx + 1}">
+        <span class="race-ranking-medal">${idx + 1}º</span>
+        <strong>${escapeHtml(row.name)}</strong>
+        <b>${brl(row.total)}</b>
+      </div>
+    `).join('') || `<div class="race-ranking-row"><strong>Aguardando vendas</strong></div>`;
+  }
+
+  $('sellerRanking').innerHTML = ranking.map((row, idx) => `
+    <div class="ranking-row ${idx === 0 ? 'first' : ''}">
       <span>${idx + 1}</span>
       <div>
         <strong>${escapeHtml(row.name)}</strong>
@@ -712,16 +956,16 @@ function renderDashboard() {
       </div>
       <b>${brl(row.total)}</b>
     </div>
-  `).join("");
+  `).join('');
 
-  $("teamSummary").innerHTML = ["verde", "azul"].map((team) => `
+  $('teamSummary').innerHTML = ['verde', 'azul'].map((team) => `
     <div class="team-box ${team}">
       <span>${escapeHtml(teamName(team))}</span>
       <strong>${score[team].goals} gol(s)</strong>
       <p>${brl(score[team].sales)} em vendas</p>
       <small>${score[team].wins} rodada(s) vencida(s)</small>
     </div>
-  `).join("");
+  `).join('');
 }
 
 function renderSellerPanel() {
@@ -737,7 +981,7 @@ function renderSellerPanel() {
 
   $("sellerPersonalPanel").innerHTML = `
     <div class="seller-hero ${vendor.team}">
-      ${buildStickerCard(vendor, Math.max(0, vendorsArray({ albumOnly: true }).findIndex((v) => v.id === vendor.id)), { compact: true })}
+      ${renderSticker(vendor, "full")}
       <div>
         <span>${escapeHtml(teamName(vendor.team))}</span>
         <h3>${escapeHtml(vendor.name)}</h3>
@@ -777,14 +1021,14 @@ function renderDailySales() {
     </div>
     <div class="daily-group-summary">
       <div class="daily-group-card verde ${winnerTeam === "verde" ? "winner" : ""}">
-        <span>Time Verde</span>
+        <span>${escapeHtml(teamName('verde'))}</span>
         <strong>${brl(totals.verde || 0)}</strong>
-        <small>Isack + Viviane</small>
+        <small>${escapeHtml(vendorsArray({ activeOnly: true }).filter((vendor) => vendor.team === 'verde').map((vendor) => vendor.shortName || vendor.name).join(' + ') || 'Sem vendedores')}</small>
       </div>
       <div class="daily-group-card azul ${winnerTeam === "azul" ? "winner" : ""}">
-        <span>Time Azul</span>
+        <span>${escapeHtml(teamName('azul'))}</span>
         <strong>${brl(totals.azul || 0)}</strong>
-        <small>Matheus + Brian</small>
+        <small>${escapeHtml(vendorsArray({ activeOnly: true }).filter((vendor) => vendor.team === 'azul').map((vendor) => vendor.shortName || vendor.name).join(' + ') || 'Sem vendedores')}</small>
       </div>
       <div class="daily-result-card">
         <span>Resultado do dia</span>
@@ -838,7 +1082,7 @@ function renderVendorAdmin() {
   const html = vendorsArray({ activeOnly: false }).map((vendor, index) => `
     <article class="vendor-editor" data-vendor-form="${escapeHtml(vendor.id)}">
       <div class="vendor-editor-preview">
-        ${buildStickerCard(vendor, index, { compact: true })}
+        ${renderSticker(vendor, "mini")}
       </div>
 
       <div class="vendor-editor-form">
@@ -859,6 +1103,21 @@ function renderVendorAdmin() {
           </label>
           <label>Número da camisa
             <input data-field="shirtNumber" type="number" min="1" max="99" value="${escapeHtml(vendor.shirtNumber || "")}" />
+          </label>
+          <label>Função / posição
+            <input data-field="position" maxlength="18" value="${escapeHtml(vendor.position || vendor.role || vendor.title || "Vendedor")}" />
+          </label>
+          <label>Altura
+            <input data-field="height" maxlength="8" placeholder="Ex.: 1,75m" value="${escapeHtml(vendor.height || "")}" />
+          </label>
+          <label>Peso
+            <input data-field="weight" maxlength="8" placeholder="Ex.: 88kg" value="${escapeHtml(vendor.weight || "")}" />
+          </label>
+          <label>Nascimento
+            <input data-field="birthDate" maxlength="12" placeholder="Ex.: 27/12/1987" value="${escapeHtml(vendor.birthDate || vendor.nascimento || "")}" />
+          </label>
+          <label>Idade
+            <input data-field="age" maxlength="4" placeholder="Ex.: 18" value="${escapeHtml(vendor.age || "")}" />
           </label>
           <label>Raridade
             <select data-field="rarity">${raritySelectOptions(vendor.rarity)}</select>
@@ -897,6 +1156,7 @@ function renderVendorAdmin() {
 
         <div class="editor-actions">
           <button class="btn btn-light" data-upload="${escapeHtml(vendor.id)}">Enviar foto</button>
+          <button class="btn btn-blue" data-camera="${escapeHtml(vendor.id)}">Bater foto</button>
           <button class="btn btn-primary" data-save-vendor="${escapeHtml(vendor.id)}">Salvar alterações</button>
           <button class="btn btn-outline" data-reset-vendor="${escapeHtml(vendor.id)}">Limpar foto</button>
           <button class="btn btn-danger" data-delete-vendor="${escapeHtml(vendor.id)}">Excluir</button>
@@ -922,11 +1182,11 @@ function renderVendorAdmin() {
   });
 
   document.querySelectorAll("[data-save-vendor]").forEach((button) => {
-    button.addEventListener("click", () => saveVendorFromForm(button.dataset.saveVendor));
+    button.addEventListener("click", async () => { await saveVendorFromForm(button.dataset.saveVendor); });
   });
 
   document.querySelectorAll("[data-delete-vendor]").forEach((button) => {
-    button.addEventListener("click", () => deleteVendor(button.dataset.deleteVendor));
+    button.addEventListener("click", async () => { await deleteVendor(button.dataset.deleteVendor); });
   });
 
   document.querySelectorAll("[data-reset-vendor]").forEach((button) => {
@@ -941,7 +1201,8 @@ function renderVendorAdmin() {
   bindPhotoButtons();
 }
 
-function saveVendorFromForm(vendorId) {
+
+async function saveVendorFromForm(vendorId) {
   if (!ensureCanSave("salvar vendedor")) return;
   const form = document.querySelector(`[data-vendor-form="${CSS.escape(vendorId)}"]`);
   if (!form) return;
@@ -956,6 +1217,11 @@ function saveVendorFromForm(vendorId) {
     shortName: get("shortName").trim() || get("name").trim() || "Vendedor",
     team: get("team") || "verde",
     shirtNumber: Number(get("shirtNumber") || 0),
+    position: get("position").trim() || "Vendedor",
+    height: get("height").trim() || "1,70m",
+    weight: get("weight").trim() || "70kg",
+    birthDate: get("birthDate").trim(),
+    age: get("age").trim() || "18",
     rarity: get("rarity") || "classic",
     title: title || "Craque de vendas",
     subtitle: get("subtitle").trim(),
@@ -966,11 +1232,12 @@ function saveVendorFromForm(vendorId) {
     active: get("active") === "true"
   });
 
-  persist();
+  await persist();
   toast("Vendedor e figurinha atualizados.");
 }
 
-function addVendor() {
+
+async function addVendor() {
   if (!ensureCanSave("adicionar vendedor")) return;
   const id = safeId();
   state.data.vendors[id] = {
@@ -979,6 +1246,11 @@ function addVendor() {
     shortName: "Novo",
     team: "verde",
     shirtNumber: vendorsArray().length + 1,
+    position: "Vendedor",
+    height: "1,70m",
+    weight: "70kg",
+    birthDate: "",
+    age: "18",
     rarity: "classic",
     title: "Craque de vendas",
     subtitle: "Copa das Vendas",
@@ -989,23 +1261,27 @@ function addVendor() {
     active: true,
     imageUrl: ""
   };
-  persist();
+  await persist();
   toast("Vendedor criado. Edite os dados no painel.");
 }
 
-function deleteVendor(vendorId) {
+
+async function deleteVendor(vendorId) {
   if (!ensureCanSave("excluir vendedor")) return;
   const vendor = getVendor(vendorId);
   if (!vendor) return;
   if (!confirm(`Excluir ${vendor.name}? As vendas antigas continuam salvas, mas não aparecerão no ranking se o vendedor for removido.`)) return;
   delete state.data.vendors[vendorId];
-  persist();
+  await persist();
   toast("Vendedor excluído.");
 }
 
 function bindPhotoButtons() {
   document.querySelectorAll("[data-upload]").forEach((button) => {
-    button.addEventListener("click", () => uploadPhoto(button.dataset.upload));
+    button.addEventListener("click", () => uploadPhoto(button.dataset.upload, "upload"));
+  });
+  document.querySelectorAll("[data-camera]").forEach((button) => {
+    button.addEventListener("click", () => uploadPhoto(button.dataset.camera, "camera"));
   });
   document.querySelectorAll("[data-clear-photo]").forEach((button) => {
     button.addEventListener("click", async () => {
@@ -1017,9 +1293,8 @@ function bindPhotoButtons() {
   });
   document.querySelectorAll("[data-download-sticker]").forEach((button) => {
     button.addEventListener("click", async () => {
-      const card = button.closest(".sticker-premium")?.querySelector(".sticker-premium-frame");
       const vendor = getVendor(button.dataset.downloadSticker);
-      await downloadElementAsImage(card, `figurinha-${vendor?.shortName || vendor?.name || "vendedor"}.png`, 3);
+      await downloadStickerPng(vendor);
     });
   });
 }
@@ -1055,7 +1330,7 @@ function renderRules() {
     ["Campanha", state.data.settings?.name || campaign.name],
     ["Loja", state.data.settings?.store || campaign.store],
     ["Período", `${state.data.settings?.startDate || campaign.startDate} a ${state.data.settings?.endDate || campaign.endDate}`],
-    ["Formato", "Disputa por duplas / times internos: Time Verde x Time Azul."],
+    ["Formato", `Disputa por duplas / seleções internas: ${teamName("verde")} x ${teamName("azul")}.`],
     ["Controle", "Somente o gerente cadastra, edita figurinhas, envia fotos e lança vendas. Rodadas, gols e bônus são calculados automaticamente pelo sistema."],
     ["Acesso vendedor", "Vendedor apenas acompanha placar, ranking, vendas, álbum e figurinhas. Não altera dados."],
     ["Produtos", state.data.settings?.productsRule || "Todos os produtos da loja contam."],
@@ -1188,48 +1463,62 @@ async function recalculateAllAutomatics() {
   toast("Placar, rodadas e bônus recalculados automaticamente.");
 }
 
-async function uploadPhoto(vendorId) {
-  if (!ensureCanSave("enviar foto")) return;
-  const cloudinaryReady = isConfigured(CONFIG.cloudinary, ["cloudName", "uploadPreset"]);
-  if (cloudinaryReady && await loadPhotoWidget()) {
-    const widget = window.cloudinary.createUploadWidget(
-      {
-        cloudName: CONFIG.cloudinary.cloudName,
-        uploadPreset: CONFIG.cloudinary.uploadPreset,
-        folder: "tenis-one-copa-vendas",
-        sources: ["local", "camera"],
-        multiple: false,
-        cropping: true,
-        croppingAspectRatio: 4 / 5
-      },
-      async (error, result) => {
-        if (error) return toast("Erro ao atualizar a foto.");
-        if (result && result.event === "success") {
-          state.data.vendors[vendorId].imageUrl = result.info.secure_url;
-          await persist();
-          toast("Foto atualizada pelo gerente.");
-        }
-      }
-    );
-    widget.open();
-    return;
-  }
 
-  const input = document.createElement("input");
-  input.type = "file";
-  input.accept = "image/*";
-  input.onchange = () => {
-    const file = input.files?.[0];
-    if (!file) return;
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = async () => {
-      state.data.vendors[vendorId].imageUrl = reader.result;
-      await persist();
-      toast("Foto salva pelo gerente.");
-    };
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
     reader.readAsDataURL(file);
-  };
-  input.click();
+  });
+}
+
+function pickImageFile(mode = "upload") {
+  return new Promise((resolve) => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+    if (mode === "camera") input.setAttribute("capture", "user");
+    input.onchange = () => resolve(input.files?.[0] || null);
+    input.click();
+  });
+}
+
+async function uploadFileToCloudinary(file) {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("upload_preset", CONFIG.cloudinary.uploadPreset);
+  formData.append("folder", "tenis-one-copa-vendas");
+
+  const response = await fetch(`https://api.cloudinary.com/v1_1/${CONFIG.cloudinary.cloudName}/image/upload`, {
+    method: "POST",
+    body: formData
+  });
+  const json = await response.json();
+  if (!response.ok || json.error) {
+    throw new Error(json?.error?.message || `HTTP ${response.status}`);
+  }
+  return json.secure_url;
+}
+
+async function uploadPhoto(vendorId, mode = "upload") {
+  if (!ensureCanSave(mode === "camera" ? "bater foto" : "enviar foto")) return;
+  const file = await pickImageFile(mode);
+  if (!file) return;
+
+  try {
+    const cloudinaryReady = isConfigured(CONFIG.cloudinary, ["cloudName", "uploadPreset"]);
+    const imageUrl = cloudinaryReady
+      ? await uploadFileToCloudinary(file)
+      : await readFileAsDataUrl(file);
+
+    state.data.vendors[vendorId].imageUrl = imageUrl;
+    await persist();
+    toast(mode === "camera" ? "Foto capturada e salva." : "Foto enviada e salva.");
+  } catch (err) {
+    console.error(err);
+    toast(`Falha ao enviar foto: ${err?.message || 'verifique Cloudinary/preset.'}`);
+  }
 }
 
 function loadScript(src) {
@@ -1265,18 +1554,55 @@ async function loadHtml2Canvas() {
   }
 }
 
+function waitForImages(root) {
+  const images = Array.from(root.querySelectorAll("img"));
+  return Promise.all(images.map((img) => {
+    if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+    return new Promise((resolve) => {
+      img.onload = resolve;
+      img.onerror = resolve;
+    });
+  }));
+}
+
 async function elementToCanvas(element, scale = 2) {
   const ready = await loadHtml2Canvas();
   if (!ready || !element) return null;
-  return window.html2canvas(element, {
-    backgroundColor: null,
-    scale,
-    useCORS: true,
-    allowTaint: true,
-    logging: false,
-    windowWidth: Math.max(document.documentElement.clientWidth, element.scrollWidth),
-    windowHeight: Math.max(document.documentElement.clientHeight, element.scrollHeight)
-  });
+  const host = document.createElement("div");
+  host.className = "canvas-export-host";
+  const clone = element.cloneNode(true);
+  clone.classList?.add("canvas-export-node");
+  clone.querySelectorAll("[loading='lazy']").forEach((node) => node.setAttribute("loading", "eager"));
+  host.appendChild(clone);
+  document.body.appendChild(host);
+
+  try {
+    await waitForImages(clone);
+    return await window.html2canvas(clone, {
+      backgroundColor: null,
+      scale,
+      useCORS: true,
+      allowTaint: false,
+      logging: false,
+      imageTimeout: 15000,
+      windowWidth: Math.max(document.documentElement.clientWidth, clone.scrollWidth, element.scrollWidth),
+      windowHeight: Math.max(document.documentElement.clientHeight, clone.scrollHeight, element.scrollHeight)
+    });
+  } catch (err) {
+    console.warn("Falha ao gerar canvas", err);
+    return null;
+  } finally {
+    host.remove();
+  }
+}
+
+function filenameSafe(value) {
+  return String(value || "vendedor")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/gi, "-")
+    .replace(/^-+|-+$/g, "")
+    .toLowerCase() || "vendedor";
 }
 
 async function downloadElementAsImage(element, filename, scale = 2) {
@@ -1286,6 +1612,17 @@ async function downloadElementAsImage(element, filename, scale = 2) {
   link.href = canvas.toDataURL("image/png");
   link.download = filename;
   link.click();
+}
+
+async function downloadStickerPng(vendor) {
+  if (!vendor) return toast("Vendedor não encontrado.");
+  const host = document.createElement("div");
+  host.className = "sticker-export-source";
+  host.innerHTML = renderSticker(vendor, "export");
+  document.body.appendChild(host);
+  const sticker = host.querySelector(".official-sticker");
+  await downloadElementAsImage(sticker, `figurinha-${filenameSafe(vendor.shortName || vendor.name)}.png`, 2);
+  host.remove();
 }
 
 async function exportAlbumPDF() {
@@ -1313,7 +1650,7 @@ async function exportAlbumPDF() {
     place(spread);
   }
 
-  const frames = Array.from(document.querySelectorAll("#stickerGrid .sticker-premium-frame"));
+  const frames = Array.from(document.querySelectorAll("#stickerGrid .official-sticker"));
   for (let i = 0; i < frames.length; i += 2) {
     pdf.addPage("a4", "portrait");
     const pageW = pdf.internal.pageSize.getWidth();
@@ -1381,8 +1718,8 @@ async function exportReportPDF() {
   line("Campanha", state.data.settings?.name);
   line("Loja", state.data.settings?.store);
   line("Período", `${state.data.settings?.startDate} a ${state.data.settings?.endDate}`);
-  line("Time Verde", `${score.verde.goals} gols — ${brl(score.verde.sales)} em vendas`);
-  line("Time Azul", `${score.azul.goals} gols — ${brl(score.azul.sales)} em vendas`);
+  line(teamName("verde"), `${score.verde.goals} gols — ${brl(score.verde.sales)} em vendas`);
+  line(teamName("azul"), `${score.azul.goals} gols — ${brl(score.azul.sales)} em vendas`);
   line("Líder", summary.leaderTeam ? teamName(summary.leaderTeam) : "Empate");
   line("Artilheiro", ranking[0] ? `${ranking[0].name} — ${brl(ranking[0].total)}` : "A definir");
   line("Figurinhas", `${summary.withPhotos}/${summary.total} com foto`);
@@ -1423,29 +1760,65 @@ function exportJSON() {
 }
 
 function bindEvents() {
-  $("loginRole").addEventListener("change", () => {
-    $("sellerPickerWrap").classList.toggle("hidden", $("loginRole").value !== "seller");
-  });
+  configureLoginMode();
 
-  $("loginBtn").addEventListener("click", () => {
-    const role = $("loginRole").value;
+  $("loginRole")?.addEventListener("change", configureLoginMode);
+
+  $("loginBtn").addEventListener("click", async () => {
     const password = $("loginPassword").value;
+
+    if (shouldUseEmailLogin()) {
+      const email = $("loginEmail").value.trim();
+      if (!email || !password) return toast("Informe email e senha.");
+
+      const nextSession = getSessionFromEmail(email);
+      if (!nextSession) return toast("Email sem permissão. Confira managerEmail e sellers no config.js.");
+
+      if (!useFirebaseAuth() || !state.auth) {
+        return toast("Firebase Auth ainda não está pronto. Confira apiKey, authDomain, databaseURL e appId no config.js e publique no GitHub Pages.");
+      }
+
+      try {
+        saveRememberedLogin();
+        await services.signInWithEmailAndPassword(state.auth, email, password);
+      } catch (err) {
+        console.warn(err);
+        toast("Não foi possível entrar. Confira se o email existe no Firebase Authentication e se a senha está correta.");
+      }
+      return;
+    }
+
+    const role = $("loginRole").value;
     if (role === "manager" && password !== String(CONFIG.managerPassword || "2026")) return toast("Senha do gerente incorreta.");
     if (role === "seller" && password !== String(CONFIG.sellerPassword || "vendas")) return toast("Senha dos vendedores incorreta.");
 
-    session.role = role;
-    session.vendorId = role === "seller" ? $("sellerPicker").value : null;
-    $("loginScreen").classList.add("hidden");
-    $("appShell").classList.remove("hidden");
-    setView(role === "seller" ? "dashboard" : "dashboard");
-    render();
+    await enterAppWithSession({
+      role,
+      vendorId: role === "seller" ? $("sellerPicker").value : null,
+      email: null
+    });
   });
 
-  $("logoutBtn").addEventListener("click", () => {
-    session = { role: null, vendorId: null };
+  $("logoutBtn").addEventListener("click", async () => {
+    if (useFirebaseAuth() && state.auth) {
+      await services.signOut(state.auth);
+    }
+
+    session = { role: null, vendorId: null, email: null };
+    realtimeStarted = false;
+    if (typeof realtimeUnsubscribe === "function") {
+      realtimeUnsubscribe();
+      realtimeUnsubscribe = null;
+    }
     $("appShell").classList.add("hidden");
     $("loginScreen").classList.remove("hidden");
-    $("loginPassword").value = "";
+    if ($("rememberAccess")?.checked) {
+      loadRememberedLogin();
+    } else {
+      $("loginPassword").value = "";
+      if ($("loginEmail")) $("loginEmail").value = "";
+    }
+    configureLoginMode();
   });
 
   document.querySelectorAll(".nav-btn").forEach((button) => {
@@ -1458,17 +1831,17 @@ function bindEvents() {
   $("saleForm").addEventListener("submit", saveSale);
   $("finalizeSelectedDayBtn")?.addEventListener("click", () => closeRound($("saleDate").value));
   $("finalizeDailyBtn")?.addEventListener("click", () => closeRound($("saleDate").value));
-  $("closeTodayBtn").addEventListener("click", () => closeRound(isoToday()));
+  $("closeTodayBtn")?.addEventListener("click", () => closeRound(isoToday()));
   $("closeRoundBtn").addEventListener("click", () => closeRound($("roundDate").value));
   $("applyBonusBtn").addEventListener("click", applyBonus);
   $("recalculateAllBtn")?.addEventListener("click", recalculateAllAutomatics);
-  $("addVendorBtn").addEventListener("click", addVendor);
-  $("seedBtn").addEventListener("click", async () => {
+  $("addVendorBtn").addEventListener("click", async () => { await addVendor(); });
+  $("seedBtn")?.addEventListener("click", async () => {
     if (!ensureCanSave("recriar dados")) return;
-    if (!confirm("Recriar os dados demonstrativos? Isso substitui os dados atuais desta demo.")) return;
+    if (!confirm("Restaurar os dados iniciais da campanha? Isso substitui os dados atuais.")) return;
     state.data = createSeedData();
     await persist();
-    toast("Dados demonstrativos recriados.");
+    toast("Dados iniciais restaurados.");
   });
 
   $("downloadReportBtn").addEventListener("click", exportReportPDF);
@@ -1476,7 +1849,7 @@ function bindEvents() {
   $("downloadStickerPackBtn").addEventListener("click", exportAlbumPDF);
   $("downloadStickerPackBtn2").addEventListener("click", exportAlbumPDF);
   $("downloadAlbumPngBtn").addEventListener("click", async () => {
-    await downloadElementAsImage(document.querySelector(".album-spread-book"), "album-copa-das-vendas.png", 2.8);
+    await downloadElementAsImage(document.querySelector(".album-spread-book"), "album-copa-das-vendas.png", 2);
   });
   $("exportJsonBtn").addEventListener("click", exportJSON);
 }
@@ -1484,6 +1857,7 @@ function bindEvents() {
 window.addEventListener("DOMContentLoaded", async () => {
   await initStorage();
   bindEvents();
+  loadRememberedLogin();
   renderVendorSelects();
   updateTrialUI();
   render();
