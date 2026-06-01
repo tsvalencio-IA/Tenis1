@@ -462,6 +462,21 @@ nav {
   grid-template-columns: 1fr auto;
 }
 
+.daily-vendor-row b {
+  color: var(--green-dark);
+  font-size: 18px;
+}
+
+.daily-entry-row {
+  background: #fbfdfc;
+}
+
+.daily-entry-row .btn {
+  padding: 9px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+}
+
 .timeline-row.bonus {
   background: #fff8db;
   border-color: #efdc8a;
@@ -891,10 +906,11 @@ nav {
   --team: #0b7f49;
   --team-dark: #07482e;
   --team-soft: #0f9d58;
+  --team-brush: #f2d134;
   --gold-a: #f7df8b;
   --gold-b: #c4952e;
   --ink: #071a33;
-  width: min(100%, 310px);
+  width: min(100%, 360px);
   color: #fff;
   isolation: isolate;
 }
@@ -903,20 +919,21 @@ nav {
   --team: #143f91;
   --team-dark: #0b2a63;
   --team-soft: #2867d8;
+  --team-brush: #f7f7f7;
 }
 
 .official-sticker--export {
-  width: 420px;
+  width: 520px;
 }
 
 .official-sticker-frame {
   position: relative;
   aspect-ratio: 4 / 5.25;
   overflow: hidden;
-  border-radius: 24px;
-  border: 7px solid var(--gold-b);
+  border-radius: 28px;
+  border: 9px solid var(--gold-b);
   background: #0b1730;
-  box-shadow: 0 22px 48px rgba(8, 30, 20, .20), inset 0 0 0 3px rgba(255,255,255,.50);
+  box-shadow: 0 24px 56px rgba(8, 30, 20, .22), inset 0 0 0 3px rgba(255,255,255,.70);
 }
 
 .official-sticker-frame::before {
@@ -924,8 +941,8 @@ nav {
   position: absolute;
   inset: 5px;
   z-index: 2;
-  border: 2px solid rgba(255,235,166,.86);
-  border-radius: 18px;
+  border: 2px solid rgba(255,255,255,.86);
+  border-radius: 20px;
   pointer-events: none;
 }
 
@@ -938,27 +955,29 @@ nav {
 .official-sticker-field {
   z-index: 0;
   background:
-    linear-gradient(180deg, rgba(255,255,255,.26), rgba(255,255,255,0) 24%),
-    linear-gradient(145deg, var(--team-dark) 0%, var(--team) 48%, #0d4a37 100%);
+    radial-gradient(circle at 86% 42%, rgba(255,255,255,.76) 0 1.8%, rgba(255,255,255,.20) 2.4%, transparent 8%),
+    radial-gradient(circle at 74% 50%, rgba(255,255,255,.58) 0 1.4%, rgba(255,255,255,.16) 2.2%, transparent 7%),
+    linear-gradient(180deg, rgba(255,255,255,.24), rgba(255,255,255,0) 24%),
+    linear-gradient(145deg, #07142e 0%, var(--team-dark) 36%, var(--team) 65%, #07142e 100%);
 }
 
 .official-sticker-field::before {
   content: "";
   position: absolute;
-  left: -8%;
-  right: -8%;
-  top: 7%;
-  height: 32%;
+  left: 16%;
+  right: 9%;
+  top: 10%;
+  height: 34%;
   background:
-    linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,.04)),
-    repeating-linear-gradient(90deg, rgba(255,255,255,.16) 0 6px, rgba(255,255,255,.04) 6px 12px);
-  border-bottom: 3px solid rgba(255,255,255,.22);
-  transform: skewY(-5deg);
+    linear-gradient(155deg, transparent 0 16%, var(--team-brush) 17% 26%, transparent 27% 38%, rgba(255,255,255,.18) 39% 48%, transparent 49% 100%),
+    linear-gradient(25deg, transparent 0 12%, rgba(17,145,80,.68) 13% 28%, transparent 29% 100%);
+  transform: rotate(-8deg);
+  opacity: .94;
 }
 
 .official-sticker-lines {
   z-index: 1;
-  inset: 45% 7% 20%;
+  inset: 52% 7% 14%;
   border: 2px solid rgba(255,255,255,.34);
   border-radius: 50% 50% 12px 12px;
   border-bottom: 0;
@@ -967,15 +986,15 @@ nav {
 
 .official-sticker-badge {
   position: absolute;
-  left: 7%;
-  top: 6%;
+  left: 5%;
+  top: 5%;
   z-index: 6;
-  width: 28%;
-  min-height: 17%;
+  width: 27%;
+  min-height: 18%;
   display: grid;
   place-items: center;
   padding: 6px 4px;
-  border-radius: 14px 0 14px 0;
+  border-radius: 16px 0 16px 0;
   background: linear-gradient(180deg, #0d214c, #07152d);
   border-right: 3px solid var(--gold-a);
   border-bottom: 3px solid var(--gold-a);
@@ -997,56 +1016,67 @@ nav {
   font-weight: 900;
 }
 
-.official-sticker-flag {
+.official-sticker-team-card {
   position: absolute;
-  right: 7%;
-  top: 6%;
+  right: 5%;
+  top: 5%;
   z-index: 6;
-  width: 25%;
-  aspect-ratio: 1.55;
+  width: 31%;
+  min-height: 15%;
   display: grid;
+  gap: 2px;
   place-items: center;
-  border-radius: 11px;
+  padding: 8px 6px;
+  text-align: center;
+  color: #07152d;
+  border-radius: 16px;
   border: 3px solid rgba(255,235,166,.92);
-  background: #fff;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,.95), rgba(255,244,196,.92)),
+    linear-gradient(90deg, var(--team) 0 16%, transparent 16% 100%);
   overflow: hidden;
   box-shadow: 0 10px 18px rgba(0,0,0,.18);
 }
 
-.official-sticker-flag--verde {
-  background: #14934f;
-}
-
-.official-sticker-flag--verde span {
-  width: 66%;
-  height: 66%;
-  background: #f1d735;
-  transform: rotate(45deg);
-  position: relative;
-}
-
-.official-sticker-flag--verde span::after {
+.official-sticker-team-card::before {
   content: "";
   position: absolute;
-  inset: 31%;
+  left: -18%;
+  top: 20%;
+  width: 52%;
+  height: 70%;
   border-radius: 999px;
-  background: #173d98;
+  background: var(--team);
+  opacity: .16;
 }
 
-.official-sticker-flag--azul {
-  background: linear-gradient(90deg, #234aa6 0 33%, #fff 33% 66%, #d94646 66% 100%);
+.official-sticker-team-card small,
+.official-sticker-team-card span {
+  position: relative;
+  z-index: 1;
+  font-size: 8px;
+  line-height: 1;
+  font-weight: 900;
+  letter-spacing: .08em;
+  color: var(--team-dark);
 }
 
-.official-sticker-flag--azul span {
-  display: none;
+.official-sticker-team-card strong {
+  position: relative;
+  z-index: 1;
+  max-width: 100%;
+  font-size: 14px;
+  line-height: .95;
+  font-weight: 900;
+  overflow-wrap: anywhere;
 }
 
 .official-sticker-stats {
   position: absolute;
-  left: 6%;
-  top: 28%;
+  left: 5%;
+  top: 27%;
   z-index: 7;
-  width: 27%;
+  width: 28%;
   display: grid;
   gap: 7px;
 }
@@ -1080,17 +1110,17 @@ nav {
 
 .official-sticker-photo {
   position: absolute;
-  left: 26%;
-  right: 5%;
-  top: 20%;
-  bottom: 23%;
+  left: 17%;
+  right: 4%;
+  top: 15%;
+  bottom: 15%;
   z-index: 5;
   display: grid;
   place-items: center;
   overflow: hidden;
-  border-radius: 18px 18px 10px 10px;
-  background: linear-gradient(180deg, rgba(255,255,255,.20), rgba(255,255,255,.04));
-  box-shadow: inset 0 0 0 2px rgba(255,255,255,.42), 0 14px 24px rgba(0,0,0,.18);
+  border-radius: 20px 20px 10px 10px;
+  background: transparent;
+  box-shadow: none;
 }
 
 .official-sticker-photo img {
@@ -1116,14 +1146,14 @@ nav {
   position: absolute;
   left: 5%;
   right: 5%;
-  bottom: 5%;
+  bottom: 4%;
   z-index: 8;
   display: grid;
   gap: 4px;
   justify-items: center;
-  padding: 10px 10px 8px;
+  padding: 12px 12px 10px;
   border: 3px solid var(--gold-a);
-  border-radius: 15px;
+  border-radius: 0 18px 18px 0;
   background: linear-gradient(180deg, #0d214c, #06142d);
   box-shadow: 0 12px 22px rgba(0,0,0,.22);
   text-align: center;
@@ -1132,7 +1162,7 @@ nav {
 .official-sticker-footer strong {
   max-width: 100%;
   color: #fff;
-  font-size: 22px;
+  font-size: 28px;
   line-height: .96;
   font-weight: 900;
   text-transform: uppercase;
@@ -1192,9 +1222,21 @@ nav {
   font-size: 6px;
 }
 
-.official-sticker--mini .official-sticker-flag {
+.official-sticker--mini .official-sticker-team-card {
+  width: 32%;
+  min-height: 15%;
+  padding: 4px 3px;
   border-width: 1px;
-  border-radius: 5px;
+  border-radius: 7px;
+}
+
+.official-sticker--mini .official-sticker-team-card small,
+.official-sticker--mini .official-sticker-team-card span {
+  font-size: 4px;
+}
+
+.official-sticker--mini .official-sticker-team-card strong {
+  font-size: 6px;
 }
 
 .official-sticker--mini .official-sticker-stats {
