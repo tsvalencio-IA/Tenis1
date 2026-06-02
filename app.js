@@ -2,28 +2,28 @@
 const campaign = CONFIG.campaign || {};
 const TEAMS = campaign.teams || {};
 const TRIAL_DAYS = Number(CONFIG.trialDays || 3);
-const CONTACT_TEXT = `${CONFIG.contactChannel || "WhatsApp"} do ${CONFIG.contactPerson || "Thiago Ventura ValÃªncio"}`;
+const CONTACT_TEXT = `${CONFIG.contactChannel || "WhatsApp"} do ${CONFIG.contactPerson || "Thiago Ventura Valêncio"}`;
 const TRIAL_KEY = "tenis_one_copa_trial_started_at_vFinal";
 const LOCAL_STATE_KEY = "tenis_one_copa_state_vFinal";
 const LOGIN_MEMORY_KEY = "tenis_one_copa_login_remember_v1";
 
 const RARITIES = {
-  legendary: { key: "legendary", label: "LendÃ¡ria", shortLabel: "Holo", note: "Destaque mÃ¡ximo da coleÃ§Ã£o" },
+  legendary: { key: "legendary", label: "Lendária", shortLabel: "Holo", note: "Destaque máximo da coleção" },
   gold: { key: "gold", label: "Ouro", shortLabel: "Ouro", note: "Grande destaque da campanha" },
   silver: { key: "silver", label: "Prata", shortLabel: "Prata", note: "Figurinha premium" },
-  classic: { key: "classic", label: "ClÃ¡ssica", shortLabel: "ClÃ¡ssica", note: "Figurinha oficial" }
+  classic: { key: "classic", label: "Clássica", shortLabel: "Clássica", note: "Figurinha oficial" }
 };
 
 const TITLE_OPTIONS = [
   "Craque da Rodada",
   "Artilheiro",
   "Camisa 10",
-  "CapitÃ£o",
+  "Capitão",
   "Destaque da Semana",
-  "RevelaÃ§Ã£o",
+  "Revelação",
   "Muralha",
   "Vendedor Raiz",
-  "GarÃ§om dos Combos",
+  "Garçom dos Combos",
   "Defesa contra Cancelamentos",
   "Personalizado"
 ];
@@ -31,7 +31,7 @@ const TITLE_OPTIONS = [
 const SPECIAL_OPTIONS = [
   { value: "normal", label: "Figurinha normal" },
   { value: "artilheiro", label: "Especial Artilheiro" },
-  { value: "campeao", label: "Especial CampeÃ£o" },
+  { value: "campeao", label: "Especial Campeão" },
   { value: "craque", label: "Especial Craque da Rodada" },
   { value: "custom", label: "Especial personalizado" }
 ];
@@ -70,7 +70,7 @@ function isoToday() {
 }
 
 function teamName(teamId) {
-  return TEAMS?.[teamId]?.name || (teamId === "azul" ? "FranÃ§a" : "Brasil");
+  return TEAMS?.[teamId]?.name || (teamId === "azul" ? "França" : "Brasil");
 }
 
 function teamAccent(teamId) {
@@ -127,7 +127,7 @@ function createSeedData() {
       shirtNumber: vendor.shirtNumber || "",
       rarity: vendor.rarity || "classic",
       title: vendor.title || "Craque de vendas",
-      subtitle: vendor.subtitle || "Rumo Ã  taÃ§a de vendas",
+      subtitle: vendor.subtitle || "Rumo à taça de vendas",
       albumOrder: Number(vendor.albumOrder || 99),
       specialType: vendor.specialType || "normal",
       customSpecialLabel: vendor.customSpecialLabel || "",
@@ -323,7 +323,7 @@ async function startRealtimeSync() {
       await services.set(root, state.data);
     }
   } catch (err) {
-    console.warn("NÃ£o foi possÃ­vel verificar dados iniciais no Firebase.", err);
+    console.warn("Não foi possível verificar dados iniciais no Firebase.", err);
   }
 
   realtimeUnsubscribe = services.onValue(root, (snapshot) => {
@@ -336,7 +336,7 @@ async function startRealtimeSync() {
       renderVendorSelects();
       render();
     } else {
-      toast("Banco ainda nÃ£o inicializado. Entre primeiro com o gerente para criar a base.");
+      toast("Banco ainda não inicializado. Entre primeiro com o gerente para criar a base.");
     }
   });
 }
@@ -376,7 +376,7 @@ async function initStorage() {
 
       const nextSession = getSessionFromEmail(user.email);
       if (!nextSession) {
-        toast("Email sem permissÃ£o no config.js. Verifique managerEmail e sellers.");
+        toast("Email sem permissão no config.js. Verifique managerEmail e sellers.");
         await services.signOut(state.auth);
         return;
       }
@@ -391,7 +391,7 @@ async function initStorage() {
 }
 
 async function persist(renderAfter = true) {
-  if (!ensureCanSave("salvar alteraÃ§Ãµes")) return false;
+  if (!ensureCanSave("salvar alterações")) return false;
 
   try {
     if (state.mode === "firebase" && state.db && session.role === "manager") {
@@ -401,7 +401,7 @@ async function persist(renderAfter = true) {
     }
   } catch (err) {
     console.error(err);
-    toast("NÃ£o foi possÃ­vel salvar no Firebase. Verifique as regras do banco e o email do gerente.");
+    toast("Não foi possível salvar no Firebase. Verifique as regras do banco e o email do gerente.");
     return false;
   }
 
@@ -508,7 +508,7 @@ function buildAutomaticRound(date) {
     winnerTeam,
     goalsAwarded,
     source: "automatico",
-    ruleUsed: "AutomÃ¡tico: maior faturamento diÃ¡rio.",
+    ruleUsed: "Automático: maior faturamento diário.",
     closedBy: "sistema",
     closedAt: new Date().toISOString()
   };
@@ -537,7 +537,7 @@ function buildAutomaticBonus(dezena) {
     winnerTeam,
     goalsAwarded: winnerTeam ? 3 : 0,
     source: "automatico",
-    ruleUsed: "AutomÃ¡tico: maior faturamento acumulado da dezena.",
+    ruleUsed: "Automático: maior faturamento acumulado da dezena.",
     closedBy: "sistema",
     closedAt: new Date().toISOString()
   };
@@ -635,7 +635,7 @@ function getStickerNumber(index) {
 
 function getSpecialLabel(vendor) {
   if (vendor.specialType === "artilheiro") return "Especial Artilheiro";
-  if (vendor.specialType === "campeao") return "Especial CampeÃ£o";
+  if (vendor.specialType === "campeao") return "Especial Campeão";
   if (vendor.specialType === "craque") return "Especial Craque";
   if (vendor.specialType === "custom") return vendor.customSpecialLabel || "Especial";
   return "";
@@ -681,6 +681,7 @@ function getStickerMeta(vendor) {
   return {
     team,
     teamLabel,
+    teamCode: team === "azul" ? "FR" : "BR",
     rarity,
     stickerNumber,
     displayName: String(vendor?.shortName || vendor?.name || "Vendedor").trim(),
@@ -704,30 +705,45 @@ function renderSticker(vendor, mode = "full") {
   return `
     <article class="official-sticker official-sticker--${normalizedMode} official-sticker--${meta.team} rarity-${meta.rarity.key}" data-sticker-vendor="${escapeHtml(vendor?.id || "")}" data-sticker-mode="${normalizedMode}">
       <div class="official-sticker-frame">
-        <div class="official-sticker-field"></div>
+        <div class="official-sticker-stadium"></div>
+        <div class="official-sticker-brush official-sticker-brush-a"></div>
+        <div class="official-sticker-brush official-sticker-brush-b"></div>
+        <div class="official-sticker-lights"></div>
+        <div class="official-sticker-confetti"></div>
         <div class="official-sticker-lines"></div>
 
         <div class="official-sticker-badge">
+          <div class="official-sticker-tournament-mark" aria-hidden="true">
+            <span class="tournament-cup"></span>
+            <span class="tournament-base"></span>
+          </div>
           <span>COPA DAS</span>
           <strong>VENDAS</strong>
           <small>2026</small>
         </div>
 
         <div class="official-sticker-team-card" aria-label="${escapeHtml(meta.teamLabel)}">
+          <div class="official-sticker-team-mark official-sticker-team-mark--${meta.team}" aria-hidden="true">
+            <span class="team-mark-shield"><i></i><b></b></span>
+            <em>${escapeHtml(meta.teamCode)}</em>
+          </div>
           <small>EQUIPE</small>
           <strong>${escapeHtml(meta.teamLabel.toUpperCase())}</strong>
           <span>#${meta.stickerNumber}</span>
         </div>
 
         <div class="official-sticker-stats">
-          <div><small>${escapeHtml(meta.birthLabel)}</small><strong>${escapeHtml(meta.birthValue)}</strong></div>
-          <div><small>ALTURA</small><strong>${escapeHtml(meta.height)}</strong></div>
-          <div><small>PESO</small><strong>${escapeHtml(meta.weight)}</strong></div>
+          <div><i>N</i><span><small>${escapeHtml(meta.birthLabel)}</small><strong>${escapeHtml(meta.birthValue)}</strong></span></div>
+          <div><i>A</i><span><small>ALTURA</small><strong>${escapeHtml(meta.height)}</strong></span></div>
+          <div><i>P</i><span><small>PESO</small><strong>${escapeHtml(meta.weight)}</strong></span></div>
         </div>
 
         <div class="official-sticker-photo">
           ${photo}
         </div>
+
+        <div class="official-sticker-footer-medal">CV</div>
+        <div class="official-sticker-footer-cup">26</div>
 
         <div class="official-sticker-footer">
           <strong>${escapeHtml(meta.displayName.toUpperCase())}</strong>
@@ -808,7 +824,7 @@ function buildEmptyAlbumSlot(number, team, label = "Reserva") {
     <article class="album-empty-slot ${team}">
       <div class="album-empty-jersey">${String(number).padStart(2, "0")}</div>
       <strong>${label}</strong>
-      <span>EspaÃ§o disponÃ­vel</span>
+      <span>Espaço disponível</span>
     </article>
   `;
 }
@@ -824,11 +840,11 @@ function setView(viewId) {
   const titles = {
     dashboard: "Corrida das Dezenas",
     sellerPanel: "Meu desempenho",
-    sales: "LanÃ§ar vendas",
-    rounds: "Rodadas e bÃ´nus",
+    sales: "Lançar vendas",
+    rounds: "Rodadas e bônus",
     vendors: "Gerenciar vendedores",
-    album: "Ãlbum e figurinhas",
-    report: "RelatÃ³rios",
+    album: "Álbum e figurinhas",
+    report: "Relatórios",
     rules: "Regras da campanha"
   };
   $("pageTitle").textContent = titles[viewId] || "Sistema";
@@ -847,7 +863,7 @@ function applyRoleUI() {
 
 function renderVendorSelects() {
   const activeVendors = vendorsArray({ activeOnly: true });
-  const opts = activeVendors.map((vendor) => `<option value="${vendor.id}">${escapeHtml(vendor.name)} â€” ${escapeHtml(teamName(vendor.team))}</option>`).join("");
+  const opts = activeVendors.map((vendor) => `<option value="${vendor.id}">${escapeHtml(vendor.name)} — ${escapeHtml(teamName(vendor.team))}</option>`).join("");
   ["saleVendor", "sellerPicker"].forEach((id) => {
     const el = $(id);
     if (el) el.innerHTML = opts;
@@ -935,7 +951,7 @@ function renderDashboard() {
   if ($('greenGoalsBoard')) $('greenGoalsBoard').textContent = score.verde.goals;
   if ($('blueGoalsBoard')) $('blueGoalsBoard').textContent = score.azul.goals;
   if ($('todayGoals')) $('todayGoals').textContent = `${getGoalsForDate(today)} gol(s)`;
-  if ($('todayDezena')) $('todayDezena').textContent = `${getDezena(today)}Âª dezena da campanha`;
+  if ($('todayDezena')) $('todayDezena').textContent = `${getDezena(today)}ª dezena da campanha`;
   if ($('topSellerName')) $('topSellerName').textContent = ranking[0]?.name || 'A definir';
   if ($('topSellerAmount')) $('topSellerAmount').textContent = ranking[0] ? brl(ranking[0].total) : brl(0);
   if ($('leaderTeam')) $('leaderTeam').textContent = leader ? teamName(leader) : 'Empate';
@@ -949,7 +965,7 @@ function renderDashboard() {
   if ($('boardTopRanking')) {
     $('boardTopRanking').innerHTML = ranking.map((row, idx) => `
       <div class="race-ranking-row place-${idx + 1}">
-        <span class="race-ranking-medal">${idx + 1}Âº</span>
+        <span class="race-ranking-medal">${idx + 1}º</span>
         <strong>${escapeHtml(row.name)}</strong>
         <b>${brl(row.total)}</b>
       </div>
@@ -961,7 +977,7 @@ function renderDashboard() {
       <span>${idx + 1}</span>
       <div>
         <strong>${escapeHtml(row.name)}</strong>
-        <small>${escapeHtml(teamName(row.team))} â€¢ ${row.salesCount} lanÃ§amento(s)</small>
+        <small>${escapeHtml(teamName(row.team))} • ${row.salesCount} lançamento(s)</small>
       </div>
       <b>${brl(row.total)}</b>
     </div>
@@ -995,7 +1011,7 @@ function renderSellerPanel() {
         <span>${escapeHtml(teamName(vendor.team))}</span>
         <h3>${escapeHtml(vendor.name)}</h3>
         <strong>${brl(total)}</strong>
-        <p>PosiÃ§Ã£o no ranking: ${position || "A definir"}Âº</p>
+        <p>Posição no ranking: ${position || "A definir"}º</p>
       </div>
     </div>
     <div class="sales-list">
@@ -1003,11 +1019,11 @@ function renderSellerPanel() {
         <div class="sale-row">
           <div>
             <strong>${sale.date.split("-").reverse().join("/")}</strong>
-            <small>${escapeHtml(sale.note || "Sem observaÃ§Ã£o")}</small>
+            <small>${escapeHtml(sale.note || "Sem observação")}</small>
           </div>
           <b>${brl(sale.amount)}</b>
         </div>
-      `).join("") || `<p class="muted">Nenhuma venda lanÃ§ada ainda.</p>`}
+      `).join("") || `<p class="muted">Nenhuma venda lançada ainda.</p>`}
     </div>
   `;
 }
@@ -1022,7 +1038,7 @@ function renderDailySales() {
   const round = state.data.rounds?.[date];
   const finalizedText = round?.status === "finalizado"
     ? `Dia finalizado pelo gerente em ${new Date(round.finalizedAt).toLocaleString("pt-BR")}.`
-    : "Dia ainda em conferÃªncia. O gerente pode finalizar quando terminar os lanÃ§amentos.";
+    : "Dia ainda em conferência. O gerente pode finalizar quando terminar os lançamentos.";
 
   const groupSummary = `
     <div class="daily-final-status ${round?.status === "finalizado" ? "closed" : ""}">
@@ -1042,7 +1058,7 @@ function renderDailySales() {
       <div class="daily-result-card">
         <span>Resultado do dia</span>
         <strong>${winnerTeam ? `${teamName(winnerTeam)} +${goals} gol(s)` : "Empate / sem vencedor"}</strong>
-        <small>${round ? "Rodada automÃ¡tica calculada" : "Ao lanÃ§ar venda, o sistema calcula automaticamente"}</small>
+        <small>${round ? "Rodada automática calculada" : "Ao lançar venda, o sistema calcula automaticamente"}</small>
       </div>
     </div>
   `;
@@ -1097,15 +1113,15 @@ function renderDailySales() {
 function renderRounds() {
   const roundRows = roundsArray().sort((a, b) => String(b.date).localeCompare(String(a.date))).map((round) => `
     <div class="timeline-row ${round.status === "finalizado" ? "closed" : ""}">
-      <strong>${round.date.split("-").reverse().join("/")} â€” ${round.winnerTeam ? teamName(round.winnerTeam) : "Empate"}</strong>
-      <span>${round.status === "finalizado" ? "Finalizado pelo gerente" : "AutomÃ¡tico em aberto"} â€¢ Verde ${brl(round.teamTotals?.verde || 0)} x Azul ${brl(round.teamTotals?.azul || 0)} â€¢ ${round.goalsAwarded || 0} gol(s)</span>
+      <strong>${round.date.split("-").reverse().join("/")} — ${round.winnerTeam ? teamName(round.winnerTeam) : "Empate"}</strong>
+      <span>${round.status === "finalizado" ? "Finalizado pelo gerente" : "Automático em aberto"} • Verde ${brl(round.teamTotals?.verde || 0)} x Azul ${brl(round.teamTotals?.azul || 0)} • ${round.goalsAwarded || 0} gol(s)</span>
     </div>
   `).join("");
 
   const bonusRows = bonusesArray().sort((a, b) => Number(b.dezena) - Number(a.dezena)).map((bonus) => `
     <div class="timeline-row bonus">
-      <strong>BÃ´nus automÃ¡tico ${bonus.dezena}Âª dezena â€” ${bonus.winnerTeam ? teamName(bonus.winnerTeam) : "Sem vencedor"}</strong>
-      <span>${bonus.startDate} a ${bonus.endDate} â€¢ +${bonus.goalsAwarded || 0} gol(s) â€¢ ${escapeHtml(bonus.ruleUsed || "")}</span>
+      <strong>Bônus automático ${bonus.dezena}ª dezena — ${bonus.winnerTeam ? teamName(bonus.winnerTeam) : "Sem vencedor"}</strong>
+      <span>${bonus.startDate} a ${bonus.endDate} • +${bonus.goalsAwarded || 0} gol(s) • ${escapeHtml(bonus.ruleUsed || "")}</span>
     </div>
   `).join("");
 
@@ -1135,10 +1151,10 @@ function renderVendorAdmin() {
           <label>Equipe
             <select data-field="team">${teamSelectOptions(vendor.team)}</select>
           </label>
-          <label>NÃºmero da camisa
+          <label>Número da camisa
             <input data-field="shirtNumber" type="number" min="1" max="99" value="${escapeHtml(vendor.shirtNumber || "")}" />
           </label>
-          <label>FunÃ§Ã£o / posiÃ§Ã£o
+          <label>Função / posição
             <input data-field="position" maxlength="18" value="${escapeHtml(vendor.position || vendor.role || vendor.title || "Vendedor")}" />
           </label>
           <label>Altura
@@ -1156,16 +1172,16 @@ function renderVendorAdmin() {
           <label>Raridade
             <select data-field="rarity">${raritySelectOptions(vendor.rarity)}</select>
           </label>
-          <label>TÃ­tulo/destaque da figurinha
+          <label>Título/destaque da figurinha
             <select data-field="titleSelect">${titleSelectOptions(TITLE_OPTIONS.includes(vendor.title) ? vendor.title : "Personalizado")}</select>
           </label>
-          <label class="custom-title-wrap ${TITLE_OPTIONS.includes(vendor.title) ? "hidden" : ""}">TÃ­tulo/destaque personalizado
+          <label class="custom-title-wrap ${TITLE_OPTIONS.includes(vendor.title) ? "hidden" : ""}">Título/destaque personalizado
             <input data-field="title" value="${escapeHtml(vendor.title || "")}" />
           </label>
-          <label>SubtÃ­tulo / frase curta
+          <label>Subtítulo / frase curta
             <input data-field="subtitle" maxlength="36" value="${escapeHtml(vendor.subtitle || "")}" />
           </label>
-          <label>Ordem no Ã¡lbum
+          <label>Ordem no álbum
             <input data-field="albumOrder" type="number" min="1" value="${escapeHtml(vendor.albumOrder || 99)}" />
           </label>
           <label>Tipo de destaque
@@ -1174,10 +1190,10 @@ function renderVendorAdmin() {
           <label class="custom-special-wrap ${vendor.specialType === "custom" ? "" : "hidden"}">Destaque personalizado
             <input data-field="customSpecialLabel" value="${escapeHtml(vendor.customSpecialLabel || "")}" />
           </label>
-          <label>Status no Ã¡lbum
+          <label>Status no álbum
             <select data-field="showInAlbum">
-              <option value="true" ${vendor.showInAlbum !== false ? "selected" : ""}>Mostrar no Ã¡lbum</option>
-              <option value="false" ${vendor.showInAlbum === false ? "selected" : ""}>Ocultar do Ã¡lbum</option>
+              <option value="true" ${vendor.showInAlbum !== false ? "selected" : ""}>Mostrar no álbum</option>
+              <option value="false" ${vendor.showInAlbum === false ? "selected" : ""}>Ocultar do álbum</option>
             </select>
           </label>
           <label>Status na campanha
@@ -1191,7 +1207,7 @@ function renderVendorAdmin() {
         <div class="editor-actions">
           <button class="btn btn-light" data-upload="${escapeHtml(vendor.id)}">Enviar foto</button>
           <button class="btn btn-blue" data-camera="${escapeHtml(vendor.id)}">Bater foto</button>
-          <button class="btn btn-primary" data-save-vendor="${escapeHtml(vendor.id)}">Salvar alteraÃ§Ãµes</button>
+          <button class="btn btn-primary" data-save-vendor="${escapeHtml(vendor.id)}">Salvar alterações</button>
           <button class="btn btn-outline" data-reset-vendor="${escapeHtml(vendor.id)}">Limpar foto</button>
           <button class="btn btn-danger" data-delete-vendor="${escapeHtml(vendor.id)}">Excluir</button>
         </div>
@@ -1304,10 +1320,10 @@ async function deleteVendor(vendorId) {
   if (!ensureCanSave("excluir vendedor")) return;
   const vendor = getVendor(vendorId);
   if (!vendor) return;
-  if (!confirm(`Excluir ${vendor.name}? As vendas antigas continuam salvas, mas nÃ£o aparecerÃ£o no ranking se o vendedor for removido.`)) return;
+  if (!confirm(`Excluir ${vendor.name}? As vendas antigas continuam salvas, mas não aparecerão no ranking se o vendedor for removido.`)) return;
   delete state.data.vendors[vendorId];
   await persist();
-  toast("Vendedor excluÃ­do.");
+  toast("Vendedor excluído.");
 }
 
 function bindPhotoButtons() {
@@ -1335,13 +1351,13 @@ function bindPhotoButtons() {
 
 function renderAlbum() {
   const summary = getCollectionSummary();
-  $("albumCoverStore").textContent = state.data.settings?.store || campaign.store || "TÃªnis One";
+  $("albumCoverStore").textContent = state.data.settings?.store || campaign.store || "Tênis One";
   $("albumCoverProgress").textContent = `${summary.withPhotos}/${summary.total} figurinhas com foto`;
   $("albumStats").innerHTML = `
     <div class="album-stat-card premium">
-      <span>Figurinhas no Ã¡lbum</span>
+      <span>Figurinhas no álbum</span>
       <strong>${summary.total}</strong>
-      <small>${summary.withPhotos} com foto â€¢ ${summary.missingPhotos} sem foto</small>
+      <small>${summary.withPhotos} com foto • ${summary.missingPhotos} sem foto</small>
     </div>
     <div class="album-stat-card premium">
       <span>Artilheiro atual</span>
@@ -1351,7 +1367,7 @@ function renderAlbum() {
     <div class="album-stat-card premium">
       <span>Equipe em destaque</span>
       <strong>${summary.leaderTeam ? teamName(summary.leaderTeam) : "Empate"}</strong>
-      <small>CritÃ©rio: gols, depois faturamento</small>
+      <small>Critério: gols, depois faturamento</small>
     </div>
   `;
   $("albumPageGrid").innerHTML = buildAlbumSpread();
@@ -1363,21 +1379,21 @@ function renderRules() {
   const rows = [
     ["Campanha", state.data.settings?.name || campaign.name],
     ["Loja", state.data.settings?.store || campaign.store],
-    ["PerÃ­odo", `${state.data.settings?.startDate || campaign.startDate} a ${state.data.settings?.endDate || campaign.endDate}`],
-    ["Formato", `Disputa por duplas / seleÃ§Ãµes internas: ${teamName("verde")} x ${teamName("azul")}.`],
-    ["Controle", "Somente o gerente cadastra, edita figurinhas, envia fotos e lanÃ§a vendas. Rodadas, gols e bÃ´nus sÃ£o calculados automaticamente pelo sistema."],
-    ["Acesso vendedor", "Vendedor apenas acompanha placar, ranking, vendas, Ã¡lbum e figurinhas. NÃ£o altera dados."],
+    ["Período", `${state.data.settings?.startDate || campaign.startDate} a ${state.data.settings?.endDate || campaign.endDate}`],
+    ["Formato", `Disputa por duplas / seleções internas: ${teamName("verde")} x ${teamName("azul")}.`],
+    ["Controle", "Somente o gerente cadastra, edita figurinhas, envia fotos e lança vendas. Rodadas, gols e bônus são calculados automaticamente pelo sistema."],
+    ["Acesso vendedor", "Vendedor apenas acompanha placar, ranking, vendas, álbum e figurinhas. Não altera dados."],
     ["Produtos", state.data.settings?.productsRule || "Todos os produtos da loja contam."],
-    ["LanÃ§amento", "O gerente lanÃ§a vendas por vendedor. Ao salvar, o sistema soma por equipe, atualiza a rodada do dia, aplica os gols e recalcula o bÃ´nus da dezena."],
-    ["Regra diÃ¡ria", "A dupla com maior faturamento no dia marca gol."],
-    ["Dias 01 a 10", "VitÃ³ria do dia = 1 gol."],
-    ["Dias 11 a 20", "VitÃ³ria do dia = 2 gols."],
-    ["Dias 21 a 30", "VitÃ³ria do dia = 3 gols."],
-    ["BÃ´nus da dezena", "+3 gols automÃ¡ticos para a dupla com maior faturamento acumulado na dezena. Se a venda for corrigida, o bÃ´nus Ã© recalculado."],
-    ["Artilheiro individual", "Vendedor com maior faturamento acumulado no mÃªs."],
-    ["PrÃªmio dupla campeÃ£", state.data.settings?.prizes?.teamChampion || campaign.prizes?.teamChampion],
-    ["PrÃªmio artilheiro", state.data.settings?.prizes?.topSeller || campaign.prizes?.topSeller],
-    ["Figurinhas", "Gerente escolhe foto, tÃ­tulo, raridade, nÃºmero, frase, ordem, status e destaque de cada vendedor."]
+    ["Lançamento", "O gerente lança vendas por vendedor. Ao salvar, o sistema soma por equipe, atualiza a rodada do dia, aplica os gols e recalcula o bônus da dezena."],
+    ["Regra diária", "A dupla com maior faturamento no dia marca gol."],
+    ["Dias 01 a 10", "Vitória do dia = 1 gol."],
+    ["Dias 11 a 20", "Vitória do dia = 2 gols."],
+    ["Dias 21 a 30", "Vitória do dia = 3 gols."],
+    ["Bônus da dezena", "+3 gols automáticos para a dupla com maior faturamento acumulado na dezena. Se a venda for corrigida, o bônus é recalculado."],
+    ["Artilheiro individual", "Vendedor com maior faturamento acumulado no mês."],
+    ["Prêmio dupla campeã", state.data.settings?.prizes?.teamChampion || campaign.prizes?.teamChampion],
+    ["Prêmio artilheiro", state.data.settings?.prizes?.topSeller || campaign.prizes?.topSeller],
+    ["Figurinhas", "Gerente escolhe foto, título, raridade, número, frase, ordem, status e destaque de cada vendedor."]
   ];
   $("rulesBox").innerHTML = rows.map(([label, value]) => `
     <div class="rule-row">
@@ -1395,7 +1411,7 @@ function renderReportSummary() {
     <div class="summary-card">
       <span>Placar final/parcial</span>
       <strong>Verde ${score.verde.goals} x ${score.azul.goals} Azul</strong>
-      <p>LÃ­der: ${leader ? teamName(leader) : "Empate"}</p>
+      <p>Líder: ${leader ? teamName(leader) : "Empate"}</p>
     </div>
     <div class="summary-card">
       <span>Artilheiro</span>
@@ -1405,7 +1421,7 @@ function renderReportSummary() {
     <div class="summary-card">
       <span>Rodadas fechadas</span>
       <strong>${roundsArray().length}</strong>
-      <p>BÃ´nus aplicados: ${bonusesArray().length}</p>
+      <p>Bônus aplicados: ${bonusesArray().length}</p>
     </div>
   `;
 }
@@ -1431,7 +1447,7 @@ async function saveSale(event) {
   const date = $("saleDate").value;
   const vendorId = $("saleVendor").value;
   const amount = Number($("saleAmount").value || 0);
-  if (!date || !vendorId || amount <= 0) return toast("Informe data, vendedor e valor vÃ¡lido.");
+  if (!date || !vendorId || amount <= 0) return toast("Informe data, vendedor e valor válido.");
 
   const id = `sale_${Date.now()}_${safeId()}`;
   state.data.sales[id] = {
@@ -1455,8 +1471,8 @@ async function saveSale(event) {
     ? `${teamName(round.winnerTeam)} recebeu ${round.goalsAwarded} gol(s) da rodada.`
     : "Rodada empatada no momento.";
   const bonusText = bonus?.winnerTeam
-    ? `BÃ´nus da ${getDezena(date)}Âª dezena recalculado para ${teamName(bonus.winnerTeam)}.`
-    : `BÃ´nus da ${getDezena(date)}Âª dezena sem vencedor no momento.`;
+    ? `Bônus da ${getDezena(date)}ª dezena recalculado para ${teamName(bonus.winnerTeam)}.`
+    : `Bônus da ${getDezena(date)}ª dezena sem vencedor no momento.`;
   toast(`Venda salva. ${roundText} ${bonusText}`);
 }
 
@@ -1489,25 +1505,25 @@ async function closeRound(date) {
     ? `${teamName(round.winnerTeam)} venceu o dia e recebeu ${round.goalsAwarded} gol(s).`
     : "Dia finalizado empatado. Nenhum gol aplicado.";
   const bonusText = bonus?.winnerTeam
-    ? ` BÃ´nus da ${round.dezena}Âª dezena atualizado para ${teamName(bonus.winnerTeam)}.`
-    : ` BÃ´nus da ${round.dezena}Âª dezena sem vencedor no momento.`;
+    ? ` Bônus da ${round.dezena}ª dezena atualizado para ${teamName(bonus.winnerTeam)}.`
+    : ` Bônus da ${round.dezena}ª dezena sem vencedor no momento.`;
   toast(`Dia ${date.split("-").reverse().join("/")} finalizado. ${roundText}${bonusText}`);
 }
 
 async function applyBonus() {
-  if (!ensureCanSave("recalcular bÃ´nus automÃ¡tico")) return;
+  if (!ensureCanSave("recalcular bônus automático")) return;
   const dezena = Number($("bonusDezena").value || 1);
   const bonus = recomputeBonusForDezena(dezena);
   await persist();
-  if (!bonus) return toast(`Nenhuma venda encontrada na ${dezena}Âª dezena.`);
-  toast(bonus.winnerTeam ? `BÃ´nus automÃ¡tico: ${teamName(bonus.winnerTeam)} recebeu +3 gols.` : "BÃ´nus automÃ¡tico recalculado sem vencedor.");
+  if (!bonus) return toast(`Nenhuma venda encontrada na ${dezena}ª dezena.`);
+  toast(bonus.winnerTeam ? `Bônus automático: ${teamName(bonus.winnerTeam)} recebeu +3 gols.` : "Bônus automático recalculado sem vencedor.");
 }
 
 async function recalculateAllAutomatics() {
-  if (!ensureCanSave("recalcular placar automÃ¡tico")) return;
+  if (!ensureCanSave("recalcular placar automático")) return;
   recomputeAllAutomatics();
   await persist();
-  toast("Placar, rodadas e bÃ´nus recalculados automaticamente.");
+  toast("Placar, rodadas e bônus recalculados automaticamente.");
 }
 
 
@@ -1654,7 +1670,7 @@ function filenameSafe(value) {
 
 async function downloadElementAsImage(element, filename, scale = 2) {
   const canvas = await elementToCanvas(element, scale);
-  if (!canvas) return toast("NÃ£o foi possÃ­vel gerar a imagem agora.");
+  if (!canvas) return toast("Não foi possível gerar a imagem agora.");
   const link = document.createElement("a");
   link.href = canvas.toDataURL("image/png");
   link.download = filename;
@@ -1662,7 +1678,7 @@ async function downloadElementAsImage(element, filename, scale = 2) {
 }
 
 async function downloadStickerPng(vendor) {
-  if (!vendor) return toast("Vendedor nÃ£o encontrado.");
+  if (!vendor) return toast("Vendedor não encontrado.");
   const host = document.createElement("div");
   host.className = "sticker-export-source";
   host.innerHTML = renderSticker(vendor, "export");
@@ -1674,9 +1690,9 @@ async function downloadStickerPng(vendor) {
 
 async function exportAlbumPDF() {
   const { jsPDF } = window.jspdf || {};
-  if (!jsPDF) return toast("Biblioteca de PDF ainda nÃ£o carregou.");
+  if (!jsPDF) return toast("Biblioteca de PDF ainda não carregou.");
   const ready = await loadHtml2Canvas();
-  if (!ready) return toast("NÃ£o foi possÃ­vel preparar o Ã¡lbum visual agora.");
+  if (!ready) return toast("Não foi possível preparar o álbum visual agora.");
 
   const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
   const cover = await elementToCanvas(document.querySelector(".album-cover-card"), 3);
@@ -1721,7 +1737,7 @@ async function exportAlbumPDF() {
 
 async function exportReportPDF() {
   const { jsPDF } = window.jspdf || {};
-  if (!jsPDF) return toast("Biblioteca de PDF ainda nÃ£o carregou.");
+  if (!jsPDF) return toast("Biblioteca de PDF ainda não carregou.");
   const pdf = new jsPDF({ unit: "mm", format: "a4" });
   const left = 14;
   let y = 16;
@@ -1734,14 +1750,14 @@ async function exportReportPDF() {
     pdf.setFontSize(16);
     pdf.text(title, left, 13);
     pdf.setFontSize(10);
-    pdf.text("TÃªnis One â€” Copa do Mundo das Vendas", left, 22);
+    pdf.text("Tênis One — Copa do Mundo das Vendas", left, 22);
     y = 42;
   }
 
   function pageCheck(extra = 10) {
     if (y + extra > 282) {
       pdf.addPage();
-      header("RelatÃ³rio da Gincana");
+      header("Relatório da Gincana");
     }
   }
 
@@ -1752,7 +1768,7 @@ async function exportReportPDF() {
     pdf.setFontSize(10);
     pdf.text(`${label}:`, left, y);
     pdf.setFont("helvetica", "normal");
-    const wrapped = pdf.splitTextToSize(String(value || "NÃ£o informado"), 130);
+    const wrapped = pdf.splitTextToSize(String(value || "Não informado"), 130);
     pdf.text(wrapped, left + 45, y);
     y += Math.max(7, wrapped.length * 5);
   }
@@ -1761,14 +1777,14 @@ async function exportReportPDF() {
   const ranking = calculateSellerRanking({ activeOnly: true });
   const summary = getCollectionSummary();
 
-  header("RelatÃ³rio da Gincana");
+  header("Relatório da Gincana");
   line("Campanha", state.data.settings?.name);
   line("Loja", state.data.settings?.store);
-  line("PerÃ­odo", `${state.data.settings?.startDate} a ${state.data.settings?.endDate}`);
-  line(teamName("verde"), `${score.verde.goals} gols â€” ${brl(score.verde.sales)} em vendas`);
-  line(teamName("azul"), `${score.azul.goals} gols â€” ${brl(score.azul.sales)} em vendas`);
-  line("LÃ­der", summary.leaderTeam ? teamName(summary.leaderTeam) : "Empate");
-  line("Artilheiro", ranking[0] ? `${ranking[0].name} â€” ${brl(ranking[0].total)}` : "A definir");
+  line("Período", `${state.data.settings?.startDate} a ${state.data.settings?.endDate}`);
+  line(teamName("verde"), `${score.verde.goals} gols — ${brl(score.verde.sales)} em vendas`);
+  line(teamName("azul"), `${score.azul.goals} gols — ${brl(score.azul.sales)} em vendas`);
+  line("Líder", summary.leaderTeam ? teamName(summary.leaderTeam) : "Empate");
+  line("Artilheiro", ranking[0] ? `${ranking[0].name} — ${brl(ranking[0].total)}` : "A definir");
   line("Figurinhas", `${summary.withPhotos}/${summary.total} com foto`);
 
   y += 4;
@@ -1779,18 +1795,18 @@ async function exportReportPDF() {
   y += 8;
 
   ranking.forEach((row, index) => {
-    line(`${index + 1}Âº`, `${row.name} â€” ${teamName(row.team)} â€” ${brl(row.total)}`);
+    line(`${index + 1}º`, `${row.name} — ${teamName(row.team)} — ${brl(row.total)}`);
   });
 
   y += 4;
   pdf.setFont("helvetica", "bold");
   pdf.setTextColor(8, 100, 58);
   pdf.setFontSize(13);
-  pdf.text("Rodadas e bÃ´nus", left, y);
+  pdf.text("Rodadas e bônus", left, y);
   y += 8;
 
   [...bonusesArray(), ...roundsArray()].forEach((item) => {
-    line(item.date || `${item.dezena}Âª dezena`, `${item.winnerTeam ? teamName(item.winnerTeam) : "Sem vencedor"} â€” ${item.goalsAwarded || 0} gol(s)`);
+    line(item.date || `${item.dezena}ª dezena`, `${item.winnerTeam ? teamName(item.winnerTeam) : "Sem vencedor"} — ${item.goalsAwarded || 0} gol(s)`);
   });
 
   pdf.save("relatorio-copa-das-vendas-tenis-one.pdf");
@@ -1819,10 +1835,10 @@ function bindEvents() {
       if (!email || !password) return toast("Informe email e senha.");
 
       const nextSession = getSessionFromEmail(email);
-      if (!nextSession) return toast("Email sem permissÃ£o. Confira managerEmail e sellers no config.js.");
+      if (!nextSession) return toast("Email sem permissão. Confira managerEmail e sellers no config.js.");
 
       if (!useFirebaseAuth() || !state.auth) {
-        return toast("Firebase Auth ainda nÃ£o estÃ¡ pronto. Confira apiKey, authDomain, databaseURL e appId no config.js e publique no GitHub Pages.");
+        return toast("Firebase Auth ainda não está pronto. Confira apiKey, authDomain, databaseURL e appId no config.js e publique no GitHub Pages.");
       }
 
       try {
@@ -1830,7 +1846,7 @@ function bindEvents() {
         await services.signInWithEmailAndPassword(state.auth, email, password);
       } catch (err) {
         console.warn(err);
-        toast("NÃ£o foi possÃ­vel entrar. Confira se o email existe no Firebase Authentication e se a senha estÃ¡ correta.");
+        toast("Não foi possível entrar. Confira se o email existe no Firebase Authentication e se a senha está correta.");
       }
       return;
     }
